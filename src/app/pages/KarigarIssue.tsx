@@ -10,7 +10,7 @@ import { fetchSheet, invalidateCache } from "../services/api";
 export const KarigarIssue = () => {
   // Use context data directly — no need to fetch separately
   const { updateStock, stockData, user, jobs, addJob, updateJob, fetchAllData,
-    karigarLedger, setKarigarLedger, productionOrders, alloyStock } = useApp();
+    karigarLedger, setKarigarLedger, productionOrders, alloyStock, liveDepartmentStock } = useApp();
 
   const [isLoading, setIsLoading] = useState(true);
   const hasRefreshed = useRef(false);
@@ -182,8 +182,13 @@ export const KarigarIssue = () => {
   }, [issuedJobsRows, pendingJobs]);
 
   const handleDepartmentWeightChange = (dept: string, value: string) => {
-    if (totalWeight && value) {
+    if (!meltingType) { alert("⚠️ Select Melting Type first!"); return; }
+    if (!totalWeight) { alert("⚠️ Enter Total Weight first!"); return; }
+    
+    if (value) {
       const entered = parseFloat(value) || 0;
+      
+      // 1. Check against order total weight
       const metal = parseFloat(metalWeight) || 0;
       const otherDepts = Object.entries(departmentWeights)
         .filter(([k]) => k !== dept)
@@ -191,6 +196,16 @@ export const KarigarIssue = () => {
 
       if (metal + otherDepts + entered > parseFloat(totalWeight)) {
         alert(`⚠️ Total allocated weight (${(metal + otherDepts + entered).toFixed(3)}g) exceeds order weight (${totalWeight}g)!`);
+        return;
+      }
+
+      // 2. Check against live department stock
+      const stockKey = meltingType as keyof typeof liveDepartmentStock;
+      const deptKey = dept as keyof typeof liveDepartmentStock["22K"];
+      const availableStock = liveDepartmentStock[stockKey]?.[deptKey] || 0;
+
+      if (entered > availableStock) {
+        alert(`⚠️ Insufficient ${dept} stock! Available: ${availableStock.toFixed(3)}g`);
         return;
       }
     }
@@ -625,7 +640,7 @@ export const KarigarIssue = () => {
               <table className="hidden md:table w-full text-base">
                 <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-100">
                   <tr>
-                    {["Timestamp", "Order / Job ID", "Karigar", "Metal", "Department", "Issued Wt", "Action"].map(h => (
+                    {["Timestamp", "Order / Job ID", "Karigar", "Metal", "Issued Wt", "Action"].map(h => (
                       <th key={h} className="px-4 py-3 text-left text-[13px] font-bold text-gray-400 uppercase tracking-wider first:rounded-tl last:rounded-tr">{h}</th>
                     ))}
                   </tr>
@@ -634,7 +649,6 @@ export const KarigarIssue = () => {
                   {issuedJobsRows.map(job => {
                     const firstDept = job.departments.find((d: any) => d.karigarAssigned);
                     const totalIssued = job.departments.reduce((s: number, d: any) => s + (d.issuedWeight || 0), 0);
-                    const deptNames = job.departments.map((d: any) => d.dept).filter(Boolean).join(", ") || "—";
                     return (
                       <tr key={job.id} className="hover:bg-amber-50/30 transition-colors group">
                         <td className="px-4 py-3.5">
@@ -662,30 +676,6 @@ export const KarigarIssue = () => {
                           <span className="inline-flex items-center px-2 py-0.5 bg-yellow-50 text-yellow-700 text-[13px] rounded-full border border-yellow-100">
                             {getMeltingTypeLabel(job.meltingType || "")}
                           </span>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <div className="space-y-1">
-                            {job.departments.map((d: any, i: number) => (
-                              <div key={i} className="flex items-center justify-between gap-2">
-                                <span className="text-[11px] font-bold text-gray-700 bg-gray-50 px-2 py-0.5 rounded border border-gray-100">
-                                  {d.dept}
-                                </span>
-                                <span className="text-[11px] font-black text-gray-900">
-                                  {(d.issuedWeight || 0).toFixed(3)}g
-                                </span>
-                              </div>
-                            ))}
-                            {parseFloat(job.metalWeight || "0") > 0 && (
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="text-[11px] font-bold text-gray-700 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 italic">
-                                  Direct Metal
-                                </span>
-                                <span className="text-[11px] font-black text-orange-600">
-                                  {parseFloat(job.metalWeight || "0").toFixed(3)}g
-                                </span>
-                              </div>
-                            )}
-                          </div>
                         </td>
                         <td className="px-4 py-3.5">
                           <span className="text-[13px] text-orange-600">{parseFloat(job.totalWeight).toFixed(3)}<span className="text-[13px] text-gray-400 ml-0.5">g</span></span>
@@ -740,25 +730,6 @@ export const KarigarIssue = () => {
                         <span className="inline-flex items-center px-2 py-0.5 bg-yellow-50 text-yellow-700 text-[11px] rounded-full border border-yellow-100 mt-0.5 font-bold">
                           {getMeltingTypeLabel(job.meltingType || "")}
                         </span>
-                      </div>
-                    </div>
-
-                    {/* Department List */}
-                    <div className="mb-3 pb-3 border-b border-gray-100">
-                      <p className="text-[10px] uppercase text-gray-400 font-bold mb-2">Department</p>
-                      <div className="space-y-1.5">
-                        {job.departments.map((d: any, i: number) => (
-                          <div key={i} className="flex items-center justify-between gap-2 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-100">
-                            <span className="text-[12px] font-bold text-gray-700">{d.dept}</span>
-                            <span className="text-[12px] font-black text-gray-900">{(d.issuedWeight || 0).toFixed(3)}g</span>
-                          </div>
-                        ))}
-                        {parseFloat(job.metalWeight || "0") > 0 && (
-                          <div className="flex items-center justify-between gap-2 bg-orange-50 px-2.5 py-1.5 rounded-lg border border-orange-100">
-                            <span className="text-[12px] font-bold text-gray-700 italic">Direct Metal</span>
-                            <span className="text-[12px] font-black text-orange-600">{parseFloat(job.metalWeight || "0").toFixed(3)}g</span>
-                          </div>
-                        )}
                       </div>
                     </div>
 
@@ -892,7 +863,7 @@ export const KarigarIssue = () => {
                             <h4 className="text-[12px] text-gray-500 uppercase tracking-widest">1. Order Info</h4>
                           </div>
                           <div>
-                            <label className="text-[12px] text-gray-400 uppercase tracking-widest mb-1.5 block">Job / Order ID *</label>
+                            <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">Job / Order ID *</label>
                             <div className="relative" ref={orderDropdownRef}>
                               <input
                                 type="text"
@@ -930,16 +901,16 @@ export const KarigarIssue = () => {
                               )}
                             </div>
                           </div>
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <label className="text-[12px] text-gray-400 uppercase tracking-widest mb-1.5 block">Total Weight (g) *</label>
+                              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">Total Weight (G) *</label>
                               <input type="number" value={totalWeight} onChange={e => {
                                 setTotalWeight(e.target.value);
                               }} required step="0.001" min="0" placeholder="0.000"
-                                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-orange-100 font-mono" />
+                                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-orange-100 font-mono font-bold" />
                             </div>
                             <div>
-                              <label className="text-[12px] text-gray-400 uppercase tracking-widest mb-1.5 block">Melting Type *</label>
+                              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">Melting Type *</label>
                               {productionOrders.some(o => o[1] === jobId) ? (
                                 <div className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-[13px] font-bold text-gray-700 h-[41px] flex items-center">
                                   {getMeltingTypeLabel(meltingType)}
@@ -974,7 +945,7 @@ export const KarigarIssue = () => {
                             const stocks = stockMap[meltingType] || [];
                             return (
                               <div className="pt-1">
-                                <p className="text-[12px] text-gray-400 uppercase tracking-widest mb-1.5">Available Metal Stock</p>
+                                <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Available Metal Stock</p>
                                 <div className="flex flex-wrap gap-2">
                                   {stocks.map(s => (
                                     <div key={s.label} className={`flex items-center justify-between gap-3 px-3 py-2 rounded-lg border text-[12px] w-full ${s.value <= 0 ? "bg-red-50 border-red-200" : "bg-amber-50 border-amber-200"
@@ -1008,14 +979,14 @@ export const KarigarIssue = () => {
                           </div>
                           <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <label className="text-[12px] text-gray-400 uppercase tracking-widest mb-1.5 block">Expected Delivery *</label>
+                              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">Expected Delivery *</label>
                               <input type="date" value={expectedDeliveryDate} onChange={e => setExpectedDeliveryDate(e.target.value)} required
-                                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-orange-100" />
+                                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-orange-100 font-bold" />
                             </div>
                             <div>
-                              <label className="text-[12px] text-gray-400 uppercase tracking-widest mb-1.5 block">Authorized By *</label>
+                              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">Authorized By *</label>
                               <select value={authorizedPerson} onChange={e => setAuthorizedPerson(e.target.value)} required
-                                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-orange-100">
+                                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-orange-100 font-bold">
                                 <option value="">Select authorized person…</option>
                                 {authorizers.map(p => <option key={p} value={p}>{p}</option>)}
                               </select>
@@ -1026,6 +997,37 @@ export const KarigarIssue = () => {
 
                       {/* Right Column */}
                       <div className="space-y-5">
+                        {/* Live Department Stock Table - Matching Screenshot */}
+                        <div className="bg-white rounded-xl overflow-hidden border border-gray-200 mt-2 mb-4 shadow-sm">
+                          <table className="w-full text-[12px] border-collapse">
+                            <thead>
+                              <tr className="bg-[#D9E9F9] border-b border-gray-300">
+                                <th colSpan={5} className="py-2.5 font-black text-gray-800 uppercase tracking-tight text-center">Live Department</th>
+                              </tr>
+                              <tr className="bg-gray-50 border-b border-gray-200">
+                                {["Metaltype", "Die", "Taar", "Chain", "KDM"].map(h => (
+                                  <th key={h} className="px-2 py-2 text-center font-black text-gray-900 border-r border-gray-200 last:border-r-0 tracking-widest uppercase">{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                              {["22K", "20K", "18K"].map((type) => {
+                                const isMatching = meltingType === type;
+                                const stockDataForType = liveDepartmentStock[type as keyof typeof liveDepartmentStock] || { Die: 0, Taar: 0, Chain: 0, KDM: 0 };
+                                return (
+                                  <tr key={type} className={`transition-colors ${isMatching ? "bg-amber-100 font-bold" : "bg-white hover:bg-gray-50"}`}>
+                                    <td className="px-2 py-2 text-center font-black border-r border-gray-200 h-10">{type}</td>
+                                    <td className="px-2 py-3 text-center border-r border-gray-200 font-medium">{stockDataForType.Die.toFixed(2)}</td>
+                                    <td className="px-2 py-3 text-center border-r border-gray-200 font-medium">{stockDataForType.Taar.toFixed(2)}</td>
+                                    <td className="px-2 py-3 text-center border-r border-gray-200 font-medium">{stockDataForType.Chain.toFixed(2)}</td>
+                                    <td className="px-2 py-3 text-center last:border-r-0 font-medium">{stockDataForType.KDM.toFixed(2)}</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+
                         {/* Step 3: Weights */}
                         <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-100 space-y-3">
                           <div className="flex items-center gap-2">
@@ -1034,25 +1036,42 @@ export const KarigarIssue = () => {
                           </div>
 
                           <div>
-                            <label className="text-[12px] text-orange-600 uppercase tracking-widest mb-1.5 block">Direct Metal (g)</label>
+                            <label className="text-[11px] font-black text-orange-600 uppercase tracking-widest mb-1.5 block italic">Direct Metal (G)</label>
                             <div className="relative">
                               <Scale className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-orange-400" />
                               <input type="number" value={metalWeight} onChange={e => handleMetalWeightChange(e.target.value)}
                                 step="0.001" placeholder="0.000"
-                                className="w-full pl-9 pr-3 py-2.5 bg-orange-50/30 border border-orange-100 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-orange-100 font-mono" />
+                                className="w-full pl-9 pr-3 py-2.5 bg-orange-50/40 border border-orange-100 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-orange-100 font-mono font-bold" />
                             </div>
                           </div>
 
                           <div className="grid grid-cols-2 gap-2.5">
-                            {["Die", "Chain", "Taar", "KDM"].map(dept => (
-                              <div key={dept}>
-                                <label className="text-[12px] text-gray-400 uppercase tracking-widest mb-1.5 block">{dept} (g)</label>
-                                <input type="number" value={departmentWeights[dept as keyof typeof departmentWeights]}
-                                  onChange={e => handleDepartmentWeightChange(dept, e.target.value)}
-                                  step="0.001" placeholder="0.000"
-                                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-orange-100 font-mono" />
-                              </div>
-                            ))}
+                            {["Die", "Chain", "Taar", "KDM"].map(dept => {
+                              const stockKey = (meltingType || "22K") as keyof typeof liveDepartmentStock;
+                              const deptKey = dept as keyof typeof liveDepartmentStock["22K"];
+                              const availableStock = liveDepartmentStock[stockKey]?.[deptKey] || 0;
+                              const hasStock = availableStock > 0;
+                              return (
+                                <div key={dept}>
+                                  <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">
+                                    {dept} (G)
+                                    {hasStock && (
+                                      <span className="text-[10px] text-green-600 font-bold ml-1 italic">
+                                        (MAX: {availableStock.toFixed(3)}G)
+                                      </span>
+                                    )}
+                                  </label>
+                                  <input type="number" value={departmentWeights[dept as keyof typeof departmentWeights]}
+                                    onChange={e => handleDepartmentWeightChange(dept, e.target.value)}
+                                    step="0.001" placeholder="0.000"
+                                    className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-orange-100 font-mono font-bold"
+                                  />
+                                  {!hasStock && meltingType && (
+                                    <p className="text-[10px] text-red-500 font-black mt-1 uppercase tracking-widest animate-pulse">Insufficient Stock</p>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       </div>
