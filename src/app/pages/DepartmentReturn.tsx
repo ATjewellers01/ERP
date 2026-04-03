@@ -610,21 +610,48 @@ export const DepartmentReturn = () => {
               <div className="md:hidden space-y-3 p-4 bg-white">
                 {activeTab === "pending" ? (
                   filteredPendingIssues.map((issue) => (
-                    <div key={issue.isNumber} className="bg-white rounded-xl p-4 border-2 border-gray-200 active:border-orange-300 active:bg-orange-50/30 transition-all" onClick={() => handleIssueSelect(issue.isNumber)}>
-                      <div className="flex justify-between items-start mb-3">
+                    <div key={issue.isNumber} className="bg-white rounded-xl p-4 border-2 border-gray-200 active:border-orange-300 active:bg-orange-50/30 transition-all">
+                      {/* Header Labels Row */}
+                      <div className="grid grid-cols-3 gap-2 mb-2 pb-2 border-b border-gray-100">
                         <div>
-                          <span className="inline-block px-1.5 py-0.5 bg-orange-50 text-orange-600 text-[10px] font-black rounded uppercase border border-orange-100 mb-1">{issue.isNumber}</span>
-                          <h4 className="text-[14px] font-black text-gray-900 uppercase tracking-tight">{issue.orderNo}</h4>
-                          <p className="text-[11px] font-mono text-gray-400 uppercase tracking-tighter truncate w-40">{issue.serialNo}</p>
+                          <p className="text-[9px] uppercase text-gray-400 font-bold">IS No</p>
+                          <span className="inline-block px-1.5 py-0.5 bg-orange-50 text-orange-600 text-[10px] font-black rounded border border-orange-100 mt-0.5">{issue.isNumber}</span>
+                        </div>
+                        <div>
+                          <p className="text-[9px] uppercase text-gray-400 font-bold">Order No</p>
+                          <p className="text-[12px] font-black text-gray-900 uppercase mt-0.5 truncate">{issue.orderNo}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-[14px] font-black text-orange-600">{issue.issuedWeight}g</p>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase">{formatDate(issue.timestamp)}</p>
+                          <p className="text-[9px] uppercase text-gray-400 font-bold">Issued Wt</p>
+                          <p className="text-[13px] font-black text-orange-600 mt-0.5">{issue.issuedWeight}g</p>
                         </div>
                       </div>
-                      <div className="flex justify-between items-center text-[12px] font-black uppercase text-gray-700 bg-gray-50 p-2 rounded-lg">
-                        <span>{issue.karigarName}</span>
-                        <ChevronRight className="w-4 h-4 text-orange-400" />
+                      
+                      {/* Serial No + Date */}
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        <div>
+                          <p className="text-[9px] uppercase text-gray-400 font-bold">Serial No</p>
+                          <p className="text-[11px] font-mono text-gray-700 uppercase mt-0.5 truncate">{issue.serialNo}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[9px] uppercase text-gray-400 font-bold">Date</p>
+                          <p className="text-[11px] font-bold text-gray-500 mt-0.5">{formatDate(issue.timestamp)}</p>
+                        </div>
+                      </div>
+                      
+                      {/* Karigar + Action Button */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex-1 bg-gray-50 px-3 py-2 rounded-lg">
+                          <p className="text-[9px] uppercase text-gray-400 font-bold">Karigar</p>
+                          <p className="text-[12px] font-black uppercase text-gray-700 mt-0.5 truncate">{issue.karigarName}</p>
+                        </div>
+                        <button
+                          onClick={() => handleIssueSelect(issue.isNumber)}
+                          className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg text-[11px] font-black uppercase shadow-md shadow-orange-200 active:scale-95 transition-all shrink-0 whitespace-nowrap"
+                        >
+                          <span>Return</span>
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
                   ))
