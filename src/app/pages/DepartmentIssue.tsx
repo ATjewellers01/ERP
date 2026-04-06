@@ -484,6 +484,31 @@ export const DepartmentIssue = () => {
           .then(() => {
             invalidateCache("Department Issue");
             invalidateCache("Production Planning");
+
+            // Update Column K (Planned Weight) in Production Planning sheet
+            const updatePlanningTask = async () => {
+              const res = await fetch(`https://script.google.com/macros/s/AKfycbygSkpwhyYTjKeO5LRz06kTXMaM0mLMDwLNNaUR_rBItSshetknhJHGWuAJ3a2CMrX4/exec?sheet=Production%20Planning`);
+              const result = await res.json();
+              if (!result.success) return;
+              const rows = result.data as any[][];
+              let rowIndex = -1;
+              for (let i = 6; i < rows.length; i++) {
+                if (String(rows[i][1]) === String(sheetSerial) && String(rows[i][9]) === String(selectedDept)) {
+                  rowIndex = i + 1; break;
+                }
+              }
+              if (rowIndex !== -1) {
+                const updateForm = new FormData();
+                updateForm.append("action", "updateCell");
+                updateForm.append("sheetName", "Production Planning");
+                updateForm.append("rowIndex", rowIndex.toString());
+                updateForm.append("columnIndex", "11"); // Column K is index 11
+                updateForm.append("value", formData.remainingWeightOverride);
+                await fetch("https://script.google.com/macros/s/AKfycbygSkpwhyYTjKeO5LRz06kTXMaM0mLMDwLNNaUR_rBItSshetknhJHGWuAJ3a2CMrX4/exec", { method: "POST", body: updateForm });
+              }
+            };
+            updatePlanningTask().catch(console.error);
+
             setTimeout(() => fetchAllData(true), 1200);
           })
           .catch(console.error);

@@ -432,6 +432,36 @@ export const KarigarIssue = () => {
       )
         .then(() => {
           invalidateCache("Karigar Issue");
+          invalidateCache("Production Planning");
+
+          // Sync individual department weights back to Production Planning sheet
+          const updatePlanningTask = async () => {
+            const res = await fetch(`https://script.google.com/macros/s/AKfycbygSkpwhyYTjKeO5LRz06kTXMaM0mLMDwLNNaUR_rBItSshetknhJHGWuAJ3a2CMrX4/exec?sheet=Production%20Planning`);
+            const result = await res.json();
+            if (!result.success) return;
+            const rows = result.data as any[][];
+
+            for (const entry of deptsWeightEntry) {
+              let rowIndex = -1;
+              for (let i = 6; i < rows.length; i++) {
+                // Match Order No (Col D / index 3) and Dept (Col J / index 9)
+                if (String(rows[i][3]) === String(jobId) && String(rows[i][9]) === String(entry.dept)) {
+                  rowIndex = i + 1; break;
+                }
+              }
+              if (rowIndex !== -1) {
+                const updateForm = new FormData();
+                updateForm.append("action", "updateCell");
+                updateForm.append("sheetName", "Production Planning");
+                updateForm.append("rowIndex", rowIndex.toString());
+                updateForm.append("columnIndex", "11"); // Column K is index 11
+                updateForm.append("value", entry.weight.toString());
+                await fetch("https://script.google.com/macros/s/AKfycbygSkpwhyYTjKeO5LRz06kTXMaM0mLMDwLNNaUR_rBItSshetknhJHGWuAJ3a2CMrX4/exec", { method: "POST", body: updateForm });
+              }
+            }
+          };
+          updatePlanningTask().catch(console.error);
+
           setTimeout(() => fetchAllData(true), 1200);
         })
         .catch((sheetErr) => console.error("Sheet submission failed:", sheetErr));
