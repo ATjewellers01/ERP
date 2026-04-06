@@ -334,27 +334,11 @@ export const DepartmentIssue = () => {
         return;
       }
 
-      // Validate against override remaining weight if available, otherwise use department remaining
-      const overrideRemaining = parseFloat(formData.remainingWeightOverride) || 0;
-      if (overrideRemaining > 0) {
-        if (enteredWeight > overrideRemaining + 0.001) {
-          alert(`Issue weight (${enteredWeight}g) exceeds the remaining planned weight (${overrideRemaining.toFixed(3)}g)!`);
-          return;
-        }
-      } else {
-        const job = jobs.find(j => j.jobId === selectedJobId);
-        const dept = job?.departments.find(d => d.id === selectedJobDeptId);
-        if (dept) {
-          const remaining = parseFloat(dept.remainingWeight || '0');
-          if (remaining <= 0) {
-            alert("Cannot issue metal: Remaining weight is 0.000g");
-            return;
-          }
-          if (enteredWeight > remaining + 0.001) {
-            alert(`Issue weight (${enteredWeight}g) exceeds the remaining planned weight (${remaining.toFixed(3)}g)!`);
-            return;
-          }
-        }
+      // Use the visible Remaining Weight field for validation
+      const visibleRemaining = parseFloat(formData.remainingWeightOverride) || 0;
+      if (enteredWeight > visibleRemaining + 0.001) {
+        alert(`Issue weight (${enteredWeight}g) exceeds the visible remaining weight (${visibleRemaining.toFixed(3)}g)!`);
+        return;
       }
     }
     setFormData({ ...formData, [name]: value });
@@ -367,7 +351,7 @@ export const DepartmentIssue = () => {
     if (!selectedJobDeptId) { alert("Please select a department"); return; }
 
     const issuedWeight = parseFloat(formData.goldIssued) || 0;
-    const remainingWeight = parseFloat(selectedDeptData?.remainingWeight || "0");
+    const remainingWeight = parseFloat(formData.remainingWeightOverride || "0");
 
     if (issuedWeight <= 0) {
       alert("Please enter a valid weight to issue.");
@@ -375,7 +359,7 @@ export const DepartmentIssue = () => {
     }
 
     if (issuedWeight > remainingWeight + 0.001) {
-      alert(`Cannot issue ${issuedWeight}g. Remaining weight is only ${remainingWeight}g.`);
+      alert(`Cannot issue ${issuedWeight}g. The current remaining weight is ${remainingWeight.toFixed(3)}g.`);
       return;
     }
 
@@ -420,7 +404,7 @@ export const DepartmentIssue = () => {
         // 1️⃣ Optimistic Local Update (Instant UI)
         const updatedDepartments = job.departments.map((d) => {
           if (d.id === selectedJobDeptId) {
-            const currentRemaining = parseFloat(d.remainingWeight || "0") || 0;
+            const currentRemaining = parseFloat(formData.remainingWeightOverride || "0");
             const currentIssued = d.issuedWeight || 0;
             const newRemaining = Math.max(0, currentRemaining - issuedWeight);
             const isFullyIssued = newRemaining <= 0.001; // Logic: condition to match pending

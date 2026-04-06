@@ -543,6 +543,7 @@ export const DepartmentReturn = () => {
                       <th className="px-4 py-3 text-[11px] font-black text-gray-400 uppercase tracking-widest">Order / Serial</th>
                       <th className="px-4 py-3 text-[11px] font-black text-gray-400 uppercase tracking-widest">Karigar</th>
                       <th className="px-4 py-3 text-[11px] font-black text-gray-400 uppercase tracking-widest text-center">Issued Wt</th>
+                      <th className="px-4 py-3 text-[11px] font-black text-gray-400 uppercase tracking-widest">Department</th>
                       <th className="px-4 py-3 text-[11px] font-black text-gray-400 uppercase tracking-widest text-center">Timestamp</th>
                       <th className="px-4 py-3 text-[11px] font-black text-gray-400 uppercase tracking-widest text-right">Action</th>
                     </tr>
@@ -551,6 +552,7 @@ export const DepartmentReturn = () => {
                       <th className="px-4 py-3 text-[11px] font-black uppercase tracking-widest">Return #</th>
                       <th className="px-4 py-3 text-[11px] font-black uppercase tracking-widest">IS-Number</th>
                       <th className="px-4 py-3 text-[11px] font-black uppercase tracking-widest">Order / Serial</th>
+                      <th className="px-4 py-3 text-[11px] font-black uppercase tracking-widest">Department</th>
                       <th className="px-4 py-3 text-[11px] font-black uppercase tracking-widest text-center">Finished Net</th>
                       <th className="px-4 py-3 text-[11px] font-black uppercase tracking-widest text-center">Scrap</th>
                       <th className="px-4 py-3 text-[11px] font-black uppercase tracking-widest text-center">Dust Wt</th>
@@ -573,6 +575,7 @@ export const DepartmentReturn = () => {
                         </td>
                         <td className="px-4 py-3 font-black text-gray-700 uppercase text-[12px]">{issue.karigarName}</td>
                         <td className="px-4 py-3 text-center font-mono text-[13px] font-black text-orange-600">{issue.issuedWeight}g</td>
+                        <td className="px-4 py-3"><span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[11px] font-bold rounded uppercase">{issue.dept || "—"}</span></td>
                         <td className="px-4 py-3 text-center text-[12px] text-gray-500">{formatDate(issue.timestamp)}</td>
                         <td className="px-4 py-3 text-right">
                           <button onClick={() => handleIssueSelect(issue.isNumber)} className="px-4 py-1.5 bg-orange-500 text-white rounded-lg text-[11px] font-black uppercase tracking-widest shadow-sm hover:bg-orange-600 active:scale-95 transition-all">Receipt</button>
@@ -589,6 +592,11 @@ export const DepartmentReturn = () => {
                             <span className="text-[12px] font-black text-gray-900 font-mono tracking-tighter uppercase">{ret.orderNo}</span>
                             <span className="text-[11px] font-mono text-gray-400 truncate w-24 tracking-tighter">{ret.serialNo}</span>
                           </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[11px] font-bold rounded uppercase">
+                            {departmentIssues.find(i => i.isNumber === ret.isNumber)?.dept || "—"}
+                          </span>
                         </td>
                         <td className="px-4 py-3 text-center font-mono text-[13px] font-black text-gray-900">{ret.finishedNet}g</td>
                         <td className="px-4 py-3 text-center font-mono text-[13px] font-black text-orange-600">{ret.scrapMetal || '0.000'}g</td>
@@ -618,8 +626,8 @@ export const DepartmentReturn = () => {
                           <span className="inline-block px-1.5 py-0.5 bg-orange-50 text-orange-600 text-[10px] font-black rounded border border-orange-100 mt-0.5">{issue.isNumber}</span>
                         </div>
                         <div>
-                          <p className="text-[9px] uppercase text-gray-400 font-bold">Order No</p>
-                          <p className="text-[12px] font-black text-gray-900 uppercase mt-0.5 truncate">{issue.orderNo}</p>
+                          <p className="text-[9px] uppercase text-gray-400 font-bold">Dept</p>
+                          <p className="text-[12px] font-black text-gray-900 uppercase mt-0.5 truncate">{issue.dept || "—"}</p>
                         </div>
                         <div className="text-right">
                           <p className="text-[9px] uppercase text-gray-400 font-bold">Issued Wt</p>
@@ -670,6 +678,7 @@ export const DepartmentReturn = () => {
                             <span className="text-gray-500">Dust: {ret.dustWeight || '0.000'}g</span>
                             <span className="text-red-600">Loss: {ret.metalLoss || '0.000'}g</span>
                           </div>
+                          <p className="text-[10px] font-black text-blue-600 uppercase mt-1">{departmentIssues.find(i => i.isNumber === ret.isNumber)?.dept || "—"}</p>
                           <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">{formatDate(ret.timestamp)}</p>
                         </div>
                       </div>

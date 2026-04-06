@@ -71,7 +71,7 @@ export const KarigarIssue = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const [jobId, setJobId] = useState("");
-  const [orderDate] = useState(new Date().toISOString().split("T")[0]);
+  const [orderDate, setOrderDate] = useState(new Date().toISOString().split("T")[0]);
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState("");
   const [totalWeight, setTotalWeight] = useState("");
   const [karigarName, setKarigarName] = useState("");
@@ -153,6 +153,10 @@ export const KarigarIssue = () => {
       if (meltingVal.includes("84") || meltingVal.includes("20K")) metalType = "20K";
       else if (meltingVal.includes("76") || meltingVal.includes("75") || meltingVal.includes("18K")) metalType = "18K";
       setMeltingType(metalType);
+      
+      // Fetch Order Date from Column I (index 8)
+      const date = order[8] ? String(order[8]) : new Date().toISOString().split("T")[0];
+      setOrderDate(date);
     } else {
       setJobId(selectedOrderNo);
     }
@@ -312,8 +316,7 @@ export const KarigarIssue = () => {
           return deptAlloc;
         });
         updateJob(originalJob.jobId, { departments: updatedDepartments, stage: "Issued", issuedVia: "karigar", updatedAt: new Date() });
-        totalIssuedWeight = parseFloat(metalWeight) || 0;
-        updatedDepartments.forEach(d => { if (d.issuedWeight) totalIssuedWeight += d.issuedWeight; });
+        totalIssuedWeight = totalDepartmentWeight;
       } else {
         // New standalone karigar issue — add as a new job entry tagged with issuedVia
         const newJobId = `KI-${Date.now()}`;
@@ -383,6 +386,7 @@ export const KarigarIssue = () => {
         metalWeight: metalWeight,
         authorizedPerson: authorizedPerson,
         expectedDeliveryDate: expectedDeliveryDate,
+        orderDate: orderDate,
         departments: depts,
         stage: "Issued"
       };
@@ -448,70 +452,235 @@ export const KarigarIssue = () => {
           <head>
             <title>Karigar Issue Slip - ${savedJobData?.jobId || ""}</title>
             <style>
-              @page { size: A4; margin: 0; }
+              @page { 
+                size: A4; 
+                margin: 0; 
+              }
+              @media print {
+                body { 
+                  -webkit-print-color-adjust: exact; 
+                  print-color-adjust: exact;
+                }
+              }
               * { margin: 0; padding: 0; box-sizing: border-box; }
-              body { font-family: Arial, sans-serif; padding: 20mm 15mm; font-size: 11px; line-height: 1.5; color: #111827; }
-              h1 { margin: 0; }
-              table { width: 100%; border-collapse: collapse; }
-              th { background-color: #2563EB; color: white; text-align: left; padding: 8px 16px; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
-              td { padding: 8px 16px; border-bottom: 1px solid #E5E7EB; font-size: 11px; }
-              tbody tr:nth-child(even) { background-color: #F9FAFB; }
-              .total-row { background-color: #EFF6FF; border-top: 2px solid #2563EB; }
-              .total-row td { font-weight: 600; color: #1D4ED8; }
-              .header-section { text-align: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #2563EB; }
-              .badge { background-color: #2563EB; color: white; padding: 4px 12px; display: inline-block; border-radius: 4px; font-weight: 600; font-size: 11px; letter-spacing: 0.05em; }
-              .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 32px; margin-bottom: 24px; }
-              .info-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #E5E7EB; font-size: 11px; }
-              .info-label { color: #374151; font-weight: 600; }
-              .info-value { color: #111827; }
-              .section-title { background-color: #F3F4F6; padding: 6px 12px; border-radius: 4px; font-weight: 600; font-size: 11px; margin-bottom: 10px; }
-              .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; margin-top: 48px; }
-              .sig-box { border-top: 2px solid #111827; padding-top: 8px; text-align: center; }
-              .sig-name { font-weight: 600; margin-top: 4px; }
-              .sig-label { font-size: 10px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; }
-              .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #D1D5DB; background: #F9FAFB; padding: 12px; border-radius: 4px; text-align: center; font-size: 10px; color: #6B7280; }
+              body { 
+                font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+                background: #fff;
+                padding: 0;
+                display: flex;
+                justify-content: center;
+              }
+              .a4-page {
+                width: 210mm;
+                min-height: 297mm;
+                padding: 15mm;
+                background: white;
+                position: relative;
+                border: 1px solid #f3f4f6; /* Subtle border for screen view */
+              }
+              .header-section { 
+                text-align: center; 
+                margin-bottom: 30px; 
+                padding-bottom: 20px; 
+                border-bottom: 3px solid #2563EB; 
+              }
+              .company-name {
+                font-size: 24px;
+                font-weight: 800;
+                color: #1e3a8a;
+                text-transform: uppercase;
+                margin-bottom: 5px;
+              }
+              .company-info {
+                font-size: 11px;
+                color: #64748b;
+                margin-bottom: 2px;
+              }
+              .slip-badge { 
+                background-color: #2563EB; 
+                color: white; 
+                padding: 6px 20px; 
+                display: inline-block; 
+                border-radius: 6px; 
+                font-weight: 700; 
+                font-size: 14px; 
+                letter-spacing: 1px;
+                margin-top: 15px;
+                text-transform: uppercase;
+              }
+              .info-grid { 
+                display: grid; 
+                grid-template-columns: 1fr 1fr; 
+                gap: 5px 40px; 
+                margin-bottom: 25px; 
+                background: #fff;
+                padding: 15px 0;
+                border-top: 1px solid #e2e8f0;
+                border-bottom: 1px solid #e2e8f0;
+              }
+              .info-row { 
+                display: flex; 
+                justify-content: space-between; 
+                padding: 8px 0; 
+                border-bottom: 1px solid #e2e8f0; 
+                font-size: 13px; 
+              }
+              .info-label { color: #64748b; font-weight: 600; text-transform: uppercase; font-size: 11px; }
+              .info-value { color: #0f172a; font-weight: 700; }
+              
+              .section-title { 
+                background-color: #f1f5f9; 
+                padding: 10px 15px; 
+                border-radius: 6px; 
+                font-weight: 800; 
+                font-size: 12px; 
+                margin-bottom: 15px; 
+                color: #1e3a8a;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                border-left: 4px solid #2563EB;
+              }
+              
+              table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+              th { background-color: #f8fafc; color: #1e3a8a; text-align: left; padding: 12px 16px; font-weight: 800; font-size: 11px; text-transform: uppercase; border-bottom: 2px solid #e2e8f0; }
+              td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #334155; }
+              tbody tr:nth-child(even) { background-color: #fcfdfe; }
+              .total-row { background-color: #f1f5f9 !important; border-top: 2px solid #2563EB; }
+              .total-row td { font-weight: 800; color: #2563EB; font-size: 15px; }
+              
+              .signatures { 
+                display: grid; 
+                grid-template-columns: 1fr 1fr; 
+                gap: 60px; 
+                margin-top: 50px; 
+                padding: 0 20px;
+              }
+              .sig-box { 
+                border-top: 1px dashed #94a3b8; 
+                padding-top: 12px; 
+                text-align: center; 
+              }
+              .sig-name { font-weight: 800; font-size: 14px; color: #0f172a; margin-top: 5px; text-transform: uppercase; }
+              .sig-label { font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 600; letter-spacing: 1px; }
+              
+              .footer { 
+                position: absolute;
+                bottom: 15mm;
+                left: 15mm;
+                right: 15mm;
+                padding-top: 20px; 
+                border-top: 1px solid #e2e8f0; 
+                text-align: center; 
+                font-size: 11px; 
+                color: #94a3b8; 
+              }
+              .watermark {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%) rotate(-45deg);
+                font-size: 100px;
+                font-weight: 900;
+                color: #f1f5f9;
+                z-index: -1;
+                opacity: 0.5;
+                white-space: nowrap;
+                user-select: none;
+              }
             </style>
           </head>
           <body>
-            <div class="header-section">
-              <h1 style="font-size:16px;font-weight:700;margin-bottom:4px;">Handmade Jewellery Manufacturing Unit</h1>
-              <p style="font-size:10px;color:#6B7280;">Near City Center, Main Road, Mumbai - 400001</p>
-              <p style="font-size:10px;color:#6B7280;margin-bottom:10px;">Phone: +91 98765 43210 | Email: info@atjewellery.com</p>
-              <span class="badge">KARIGAR ISSUE SLIP</span>
-            </div>
+            <div class="a4-page">
+              <div class="watermark">AUTH-VOUCHER</div>
+              
+              <div class="header-section">
+                <h1 class="company-name">Handmade Jewellery Manufacturing Unit</h1>
+                <p class="company-info">Near City Center, Main Road, Mumbai - 400001</p>
+                <p class="company-info">Phone: +91 98765 43210 | Email: production@atjewellery.com</p>
+                <span class="slip-badge">Karigar Issue Slip</span>
+              </div>
 
-            <div class="info-grid">
-              <div class="info-row"><span class="info-label">Order ID:</span><span class="info-value">${savedJobData?.jobId || ""}</span></div>
-              <div class="info-row"><span class="info-label">Issue Date:</span><span class="info-value">${savedJobData?.issueDate || ""}</span></div>
-              <div class="info-row"><span class="info-label">Order Date:</span><span class="info-value">${savedJobData?.orderDate || ""}</span></div>
-              <div class="info-row"><span class="info-label">Expected Delivery:</span><span class="info-value">${savedJobData?.expectedDeliveryDate || ""}</span></div>
-              <div class="info-row"><span class="info-label">Karigar Name:</span><span class="info-value">${savedJobData?.karigarName || ""}</span></div>
-              <div class="info-row"><span class="info-label">Metal Type:</span><span class="info-value">${getMeltingTypeLabel(savedJobData?.meltingType || "")}</span></div>
-              <div class="info-row"><span class="info-label">Authorized By:</span><span class="info-value">${savedJobData?.authorizedPerson || ""}</span></div>
-              <div class="info-row"><span class="info-label">Issued By:</span><span class="info-value">${savedJobData?.issuedBy || ""}</span></div>
-            </div>
+              <div class="info-grid">
+                <div class="info-column">
+                  <div class="info-row"><span class="info-label">Order / Job ID</span><span class="info-value">${savedJobData?.jobId || ""}</span></div>
+                  <div class="info-row"><span class="info-label">Order Date</span><span class="info-value">${(() => {
+    const raw = savedJobData?.orderDate;
+    if (!raw) return "—";
+    try {
+      const d = new Date(raw);
+      if (isNaN(d.getTime())) return raw;
+      return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getFullYear()}`;
+    } catch { return raw; }
+  })()}</span></div>
+                  <div class="info-row"><span class="info-label">Metal Type</span><span class="info-value">${getMeltingTypeLabel(savedJobData?.meltingType || "")}</span></div>
+                </div>
+                <div class="info-column">
+                  <div class="info-row"><span class="info-label">Issue Date</span><span class="info-value">${(() => {
+    const raw = savedJobData?.issueDate;
+    if (!raw) return "—";
+    try {
+      // Handle "DD/MM/YYYY HH:mm:ss" vs ISO
+      if (raw.includes("/") && raw.length > 10) return raw.split(" ")[0];
+      const d = new Date(raw);
+      if (isNaN(d.getTime())) return raw;
+      return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getFullYear()}`;
+    } catch { return raw; }
+  })()}</span></div>
+                  <div class="info-row"><span class="info-label">Delivery Date</span><span class="info-value">${(() => {
+    const raw = savedJobData?.expectedDeliveryDate;
+    if (!raw) return "—";
+    try {
+      const d = new Date(raw);
+      if (isNaN(d.getTime())) return raw;
+      return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getFullYear()}`;
+    } catch { return raw; }
+  })()}</span></div>
+                  <div class="info-row"><span class="info-label">Karigar Name</span><span class="info-value">${savedJobData?.karigarName || ""}</span></div>
+                  <div class="info-row"><span class="info-label">Authorized By</span><span class="info-value">${savedJobData?.authorizedPerson || ""}</span></div>
+                </div>
+              </div>
 
-            <p class="section-title">Department Details</p>
-            <table>
-              <thead><tr><th>Department</th><th style="text-align:right">Issued Weight (g)</th></tr></thead>
-              <tbody>
-                ${savedJobData?.metalWeight && parseFloat(savedJobData.metalWeight) > 0
-          ? `<tr><td>Direct Metal</td><td style="text-align:right">${savedJobData.metalWeight}</td></tr>`
+              <h2 class="section-title">Department Allocation Details</h2>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Department Description</th>
+                    <th style="text-align:right">Weight Allocation (g)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${savedJobData?.metalWeight && parseFloat(savedJobData.metalWeight) > 0
+          ? `<tr><td>Direct Metal</td><td style="text-align:right; font-weight: 700;">${parseFloat(savedJobData.metalWeight).toFixed(3)}</td></tr>`
           : ""}
-                ${(savedJobData?.departments || []).map((d: any, i: number) =>
-            `<tr style="background:${i % 2 === 0 ? "#F9FAFB" : "white"}"><td>${d.dept}</td><td style="text-align:right">${d.issuedWeight.toFixed(3)}</td></tr>`
+                  ${(savedJobData?.departments || []).map((d: any) =>
+            `<tr><td>${d.dept}</td><td style="text-align:right; font-weight: 700;">${parseFloat(d.issuedWeight).toFixed(3)}</td></tr>`
           ).join("")}
-                <tr class="total-row"><td>TOTAL</td><td style="text-align:right">${savedJobData?.totalWeight || "0.000"}g</td></tr>
-              </tbody>
-            </table>
+                  <tr class="total-row">
+                    <td>GRAND TOTAL WEIGHT</td>
+                    <td style="text-align:right">${(() => {
+                      const mWeight = parseFloat(savedJobData?.metalWeight || "0");
+                      const dWeights = (savedJobData?.departments || []).reduce((s: number, d: any) => s + (parseFloat(d.issuedWeight) || 0), 0);
+                      return (mWeight + dWeights).toFixed(3);
+                    })()}g</td>
+                  </tr>
+                </tbody>
+              </table>
 
-            <div class="signatures">
-              <div class="sig-box"><p class="sig-label">Received By (Karigar)</p><p class="sig-name">${savedJobData?.karigarName || ""}</p></div>
-              <div class="sig-box"><p class="sig-label">Authorized By</p><p class="sig-name">${savedJobData?.authorizedPerson || ""}</p></div>
-            </div>
+              <div class="signatures">
+                <div class="sig-box">
+                  <p class="sig-name">${savedJobData?.karigarName || "________________"}</p>
+                  <p class="sig-label">Received By (Karigar Signature)</p>
+                </div>
+                <div class="sig-box">
+                  <p class="sig-name">${savedJobData?.authorizedPerson || "________________"}</p>
+                  <p class="sig-label">Authorized Signatory</p>
+                </div>
+              </div>
 
-            <div class="footer">
-              <strong>Note:</strong> This is a computer-generated slip. Generated on: ${new Date().toLocaleDateString("en-IN")}
+              <div class="footer">
+                <p>This is a system-generated official production document of AT Jewellers ERP. No physical signature required locally.</p>
+                <p style="margin-top: 5px;">Generated on: ${new Date().toLocaleString("en-IN")}</p>
+              </div>
             </div>
           </body>
         </html>
@@ -684,7 +853,13 @@ export const KarigarIssue = () => {
                         <td className="px-4 py-3.5">
                           <button
                             onClick={() => {
-                              setSavedJobData({ ...job, issueDate: formatTimestamp(job.updatedAt), issuedBy: job.authorizedPerson || "Admin" });
+                              const orderDateForSlip = productionOrders.find(o => o[1] === job.orderNo)?.[8] || "";
+                              setSavedJobData({ 
+                                ...job, 
+                                orderDate: orderDateForSlip, 
+                                issueDate: formatTimestamp(job.updatedAt), 
+                                issuedBy: job.authorizedPerson || "Admin" 
+                              });
                               setShowSlip(true);
                             }}
                             className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg border border-transparent hover:border-orange-100 transition-all"
@@ -710,7 +885,13 @@ export const KarigarIssue = () => {
                       </div>
                       <button
                         onClick={() => {
-                          setSavedJobData({ ...job, issueDate: formatTimestamp(job.updatedAt), issuedBy: job.authorizedPerson || "Admin" });
+                          const orderDateForSlip = productionOrders.find(o => o[1] === job.orderNo)?.[8] || "";
+                          setSavedJobData({ 
+                            ...job, 
+                            orderDate: orderDateForSlip, 
+                            issueDate: formatTimestamp(job.updatedAt), 
+                            issuedBy: job.authorizedPerson || "Admin" 
+                          });
                           setShowSlip(true);
                         }}
                         className="p-2 bg-orange-50 text-orange-600 rounded-lg border border-orange-100 hover:bg-orange-100 transition-all shrink-0"

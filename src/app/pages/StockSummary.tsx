@@ -16,7 +16,7 @@ import {
 import { useApp } from "../context/AppContext";
 
 export const StockSummary = () => {
-  const { jobs, stockData, liveDepartmentStock, fetchAllData } = useApp();
+  const { jobs, stockData, liveDepartmentStock, departmentIssues, fetchAllData } = useApp();
   const hasRefreshed = useRef(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -171,33 +171,33 @@ export const StockSummary = () => {
   // ─── Department Issue Stats ──────────────────────────────────────────────
   const deptIssueStats = useMemo(() => {
     return deptNames.map((deptName) => {
-      const allActiveDepts = jobs.flatMap((job) =>
+      const allDepts = jobs.flatMap((job) =>
         job.departments
-          .filter((d) => d.dept === deptName && d.status !== "Completed" && d.status !== "Returned")
+          .filter((d) => d.dept === deptName)
           .map((d) => ({ ...d, jobMetalType: job.metalType }))
       );
 
-      const totalCount = allActiveDepts.length;
-      const issuePending = allActiveDepts.filter((d) => d.status === "Pending").length;
-      const returnPending = allActiveDepts.filter((d) => d.status === "Issued").length;
+      const totalCount = allDepts.length;
+      const issuePending = allDepts.filter((d) => hasValue(d.masterColM) && !hasValue(d.masterColN)).length;
+      const returnPending = allDepts.filter((d) => d.status === "Issued").length;
 
-      // Match DepartmentIssue.tsx: Issue Pending Wt = Sum of issuedWeight for Issued status
-      const totalIssuePendingWeight = allActiveDepts
-        .filter((d) => d.status === "Issued")
-        .reduce((sum, d) => sum + (d.issuedWeight || 0), 0);
+      // Match DepartmentIssue.tsx: Issue Pending Wt = Historical sum from Ledger sheet
+      const totalIssuePendingWeight = departmentIssues
+        .filter(issue => allDepts.some(d => d.id === issue.serialNo))
+        .reduce((sum, issue) => sum + (parseFloat(issue.issuedWeight) || 0), 0);
 
-      const totalPlannedWeight = allActiveDepts.reduce(
+      const totalPlannedWeight = allDepts.reduce(
         (sum, d) => sum + (parseFloat(d.plannedWeight) || 0),
         0
       );
 
-      // Match DepartmentIssue.tsx: Return Pending Wt = Sum of finishedWeight for all active depts
-      const totalReturnPendingWeight = allActiveDepts
+      // Match DepartmentIssue.tsx: Return Pending Wt = Sum of finishedWeight across all depts
+      const totalReturnPendingWeight = allDepts
         .reduce((sum, d) => sum + (d.finishedWeight || 0), 0);
 
       const meltingTypeBreakdown = ["24K_999", "24K_995", "22K", "20K", "18K"]
         .map((metalType) => {
-          const depts = allActiveDepts.filter((d) => d.jobMetalType === metalType);
+          const depts = allDepts.filter((d: any) => d.jobMetalType === metalType);
           let displayType = metalType;
           if (metalType === "24K_999") displayType = "24K (99.9%)";
           else if (metalType === "24K_995") displayType = "24K (99.50%)";
@@ -206,17 +206,17 @@ export const StockSummary = () => {
             type: displayType,
             count: depts.length,
             totalWeight: depts.reduce(
-              (sum, d) => sum + (parseFloat(d.plannedWeight) || 0),
+              (sum: number, d: any) => sum + (parseFloat(d.plannedWeight) || 0),
               0
             ),
-            issuePendingCount: depts.filter((d) => d.status === "Pending").length,
+            issuePendingCount: depts.filter((d: any) => d.status === "Pending").length,
             issuePendingWeight: depts
-              .filter((d) => d.status === "Pending")
-              .reduce((sum, d) => sum + (parseFloat(d.plannedWeight) || 0), 0),
-            returnPendingCount: depts.filter((d) => d.status === "Issued").length,
+              .filter((d: any) => d.status === "Pending")
+              .reduce((sum: number, d: any) => sum + (parseFloat(d.plannedWeight) || 0), 0),
+            returnPendingCount: depts.filter((d: any) => d.status === "Issued").length,
             returnPendingWeight: depts
-              .filter((d) => d.status === "Issued")
-              .reduce((sum, d) => sum + (d.issuedWeight || 0), 0),
+              .filter((d: any) => d.status === "Issued")
+              .reduce((sum: number, d: any) => sum + (d.issuedWeight || 0), 0),
           };
         })
         .filter((m) => m.count > 0);
@@ -554,7 +554,7 @@ export const StockSummary = () => {
       </div> */}
 
           {/* ── Created Orders Department-wise Breakdown ──────────────────────── */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          {/* <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="bg-gradient-to-r from-violet-500 to-purple-600 px-6 py-4 flex items-center gap-3">
               <FileText className="w-5 h-5 text-white" />
               <h3 className="text-base font-bold text-white">
@@ -626,64 +626,7 @@ export const StockSummary = () => {
                 </tbody>
               </table>
             </div>
-
-            {/* Metal Type Breakdown */}
-            {deptIssueStats.some((dept) => dept.meltingTypeBreakdown.length > 0) && (
-              <div className="border-t border-gray-100 p-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <BarChart3 className="w-4 h-4 text-purple-500" />
-                  <h4 className="text-sm font-semibold text-gray-700">
-                    Metal Type Breakdown by Department
-                  </h4>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {deptIssueStats
-                    .filter((dept) => dept.meltingTypeBreakdown.length > 0)
-                    .map((dept) => (
-                      <div key={dept.name} className="bg-gray-50 border border-gray-200 rounded-xl p-3">
-                        <div className="flex items-center gap-2 mb-3">
-                          <ArrowRight className="w-3.5 h-3.5 text-purple-400" />
-                          <h5 className="text-sm font-bold text-gray-800">{dept.name}</h5>
-                        </div>
-                        <div className="space-y-2">
-                          {dept.meltingTypeBreakdown.map((mt) => (
-                            <div
-                              key={mt.type}
-                              className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-sm transition-shadow duration-150"
-                            >
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs font-bold text-gray-800">{mt.type}</span>
-                                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-semibold">
-                                  {mt.count} jobs
-                                </span>
-                              </div>
-                              <div className="space-y-1.5">
-                                <div className="flex justify-between items-center text-xs">
-                                  <span className="text-gray-500">Total</span>
-                                  <span className="font-bold text-gray-800">{mt.totalWeight.toFixed(3)}g</span>
-                                </div>
-                                <div className="flex justify-between items-center text-xs bg-blue-50 rounded px-2 py-1">
-                                  <span className="text-blue-600 font-medium">Issue Pending</span>
-                                  <span className="font-bold text-blue-700">
-                                    {mt.issuePendingWeight.toFixed(3)}g ({mt.issuePendingCount})
-                                  </span>
-                                </div>
-                                <div className="flex justify-between items-center text-xs bg-orange-50 rounded px-2 py-1">
-                                  <span className="text-orange-600 font-medium">Return Pending</span>
-                                  <span className="font-bold text-orange-700">
-                                    {mt.returnPendingWeight.toFixed(3)}g ({mt.returnPendingCount})
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            )}
-          </div>
+          </div> */}
 
           {/* ── Karigar Issue Report ──────────────────────────────────────────── */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
