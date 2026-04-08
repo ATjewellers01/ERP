@@ -243,7 +243,7 @@ export const Settings = () => {
           <table className="w-full border-collapse">
             <thead className="sticky top-0 z-20 bg-gray-50/50 backdrop-blur-md">
               <tr className="border-b border-gray-200">
-                {["User Details", "Role", "Contact Info", "Credentials", "Access", "Actions"].map((h) => (
+                {["User Details", "Role", "Contact Info", "Password", "Access", "Actions"].map((h) => (
                   <th key={h} className={`px-6 py-4 text-left text-[11px] font-bold text-gray-500 uppercase tracking-widest ${h === "Access" ? "w-64" : ""}`}>
                     {h}
                   </th>
@@ -296,9 +296,9 @@ export const Settings = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-1.5 font-mono text-xs text-gray-400 bg-gray-50 px-2.5 py-1 rounded-md w-fit">
-                        <Lock className="w-3 h-3" />
-                        <span>••••••••</span>
+                      <div className="flex items-center gap-1.5 font-mono text-xs text-gray-600 bg-gray-50 px-2.5 py-1 rounded-md w-fit border border-gray-100">
+                        <Lock className="w-3 h-3 text-gray-400" />
+                        <span>{u.password}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 w-64">
@@ -373,6 +373,13 @@ export const Settings = () => {
                   <div className="space-y-1">
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Email</p>
                     <p className="text-xs text-gray-700 truncate">{u.email || "—"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Password</p>
+                    <div className="flex items-center gap-1.5 font-mono text-xs text-gray-600 bg-gray-50 px-2 py-0.5 rounded border border-gray-100 w-fit">
+                       <Lock className="w-3 h-3 text-gray-400" />
+                       <span>{u.password}</span>
+                    </div>
                   </div>
                   <div className="space-y-1">
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Role</p>
