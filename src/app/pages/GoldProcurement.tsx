@@ -35,6 +35,7 @@ export const GoldProcurement = () => {
   const [assayFile, setAssayFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Fetch Storage Locations from Master Drop Down sheet (Column A)
   const [storageLocations, setStorageLocations] = useState<string[]>([]);
@@ -110,9 +111,6 @@ export const GoldProcurement = () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
 
-    const weight = parseFloat(formData.grossWeight);
-    const purityValue = parseFloat(formData.purity);
-
     try {
       const now = new Date();
       const displayDate = now.toLocaleDateString("en-US", {
@@ -121,48 +119,14 @@ export const GoldProcurement = () => {
         day: "numeric",
       });
 
-      // 1️⃣ Optimistic Stock Update
-      if (purityValue === 99.9) {
-        updateStock({
-          stock24K_999: stockData.stock24K_999 + weight,
-          stock24K: stockData.stock24K + weight,
-        });
-      } else if (purityValue === 99.5) {
-        updateStock({
-          stock24K_995: stockData.stock24K_995 + weight,
-          stock24K: stockData.stock24K + weight,
-        });
-      }
-
-      // 2️⃣ Optimistic Entry Update
-      let lastSN = 0;
-      procurementEntries.forEach(entry => {
-        if (entry.serialNo && entry.serialNo.startsWith("SN-")) {
-          const num = parseInt(entry.serialNo.replace("SN-", ""), 10);
-          if (!isNaN(num) && num > lastSN) lastSN = num;
-        }
-      });
-      const nextSerialNo = `SN-${String(lastSN + 1).padStart(3, "0")}`;
-
-      const newEntry: ProcurementEntry = {
-        serialNo: nextSerialNo,
-        customerName: formData.customerName,
-        invoiceNumber: formData.invoiceNumber,
-        grossWeight: formData.grossWeight,
-        purity: `${formData.purity}%`,
-        storageLocation: formData.storageLocation,
-        date: displayDate,
-        assayFileUrl: assayFile ? URL.createObjectURL(assayFile) : "",
-        assayFileName: assayFile ? assayFile.name : "",
-      };
-
-      setProcurementEntries([newEntry, ...procurementEntries]);
+      // (Optimistic Updates intentionally removed. The UI will explicitly wait for background sync)
 
       // 3️⃣ Instant UI Feedback
       setShowModal(false);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 2000);
       setIsSubmitting(false);
+      setIsSyncing(true);
 
       // 4️⃣ Background Execution (File Upload + Sheet Insert)
       const backgroundTask = async () => {
@@ -228,10 +192,21 @@ export const GoldProcurement = () => {
         );
 
         invalidateCache("24K Metal Stock");
-        setTimeout(() => fetchAllData(true), 1200);
+        setTimeout(async () => {
+          try {
+            await fetchAllData(true);
+          } catch(e) {
+            console.error(e);
+          } finally {
+            setIsSyncing(false);
+          }
+        }, 400);
       };
 
-      backgroundTask().catch((err) => console.error("Procurement Background Error:", err));
+      backgroundTask().catch((err) => {
+        console.error("Procurement Background Error:", err);
+        setIsSyncing(false);
+      });
 
     } catch (error) {
       console.error("Procurement Error:", error);
@@ -444,6 +419,17 @@ export const GoldProcurement = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 bg-white">
+                    {/* Syncing Loader Row */}
+                    {isSyncing && (
+                      <tr>
+                        <td colSpan={8} className="py-2.5 bg-amber-50/50 border-b border-amber-100">
+                          <div className="flex items-center justify-center gap-2">
+                            <div className="w-4 h-4 border-2 border-amber-400 border-t-amber-600 rounded-full animate-spin"></div>
+                            <span className="text-[13px] font-bold text-amber-800">Saving Data...</span>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                     {filteredEntries.length === 0 ? (
                       <tr>
                         <td colSpan={8} className="py-14 text-center">
@@ -491,6 +477,13 @@ export const GoldProcurement = () => {
 
               {/* Mobile Card View */}
               <div className="md:hidden p-4 space-y-4">
+                {/* Syncing Loader Mobile */}
+                {isSyncing && (
+                  <div className="flex items-center justify-center gap-2 py-2.5 bg-amber-50/50 rounded-xl border border-amber-100">
+                    <div className="w-4 h-4 border-2 border-amber-400 border-t-amber-600 rounded-full animate-spin"></div>
+                    <span className="text-[13px] font-bold text-amber-800">Saving to Sheet...</span>
+                  </div>
+                )}
                 {filteredEntries.length === 0 ? (
                   <div className="py-10 text-center flex flex-col items-center gap-2">
                     <FileText className="w-10 h-10 text-gray-300" />

@@ -31,7 +31,8 @@ export const Login = () => {
     if (success) {
       navigate("/dashboard");
     } else {
-      setError("Invalid credentials. Use password: '123'");
+      setError("Invalid Username or Password");
+      setTimeout(() => setError(""), 3000);
     }
     setIsLoading(false);
   };
@@ -44,6 +45,14 @@ export const Login = () => {
       <div className="lp-blob lp-blob-tl" />
       <div className="lp-blob lp-blob-br" />
 
+      {/* ── Error Toast (outside card) ── */}
+      {error && (
+        <div className="lp-error">
+          <AlertCircle size={16} />
+          <span>{error}</span>
+        </div>
+      )}
+
       <div className="lp-card">
         {/* ── Logo ── */}
         <div className="lp-logo-wrap">
@@ -53,14 +62,6 @@ export const Login = () => {
         </div>
 
         <div className="lp-divider" />
-
-        {/* ── Error ── */}
-        {error && (
-          <div className="lp-error">
-            <AlertCircle size={15} />
-            <span>{error}</span>
-          </div>
-        )}
 
         {/* ── Form ── */}
         <form onSubmit={handleSubmit} className="lp-form" autoComplete="off">
@@ -206,17 +207,27 @@ export const Login = () => {
 
         /* ── Error ──────────────────────────────── */
         .lp-error {
+          position: fixed;
+          top: 24px;
+          right: 24px;
+          z-index: 1000;
           display: flex;
           align-items: center;
-          gap: 7px;
-          background: #fef2f2;
-          border: 1px solid #fecaca;
+          gap: 8px;
+          background: #fff;
+          border-left: 4px solid #ef4444;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
           color: #dc2626;
-          font-size: 0.82rem;
-          border-radius: 10px;
-          padding: 10px 13px;
-          margin-bottom: 1.2rem;
-          font-weight: 500;
+          font-size: 0.9rem;
+          border-radius: 8px;
+          padding: 14px 20px;
+          font-weight: 600;
+          animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         }
 
         /* ── Form ───────────────────────────────── */

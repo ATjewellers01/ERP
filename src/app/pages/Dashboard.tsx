@@ -116,15 +116,7 @@ export const Dashboard = () => {
           </div>
         </div>
       </div>
-      {trend && (
-        <div className="flex items-center gap-2">
-          <div className={`px-1.5 py-0.5 rounded-lg flex items-center gap-1 ${trend > 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-            {trend > 0 ? <ArrowUpRight className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-            <span className="text-[10px] font-black">{Math.abs(trend)}%</span>
-          </div>
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">vs yesterday</span>
-        </div>
-      )}
+    
     </div>
   );
 

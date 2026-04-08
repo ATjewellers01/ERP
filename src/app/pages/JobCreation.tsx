@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, type ReactNode } from "react";
 import {
   Plus,
   Trash2,
@@ -31,7 +31,7 @@ export const JobCreation = () => {
   const [filterStage, setFilterStage] = useState("");
   const [karigars, setKarigars] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const hasRefreshed = useRef(false);
 
   // Initial load with fast loading pattern (1 second)
@@ -273,7 +273,6 @@ export const JobCreation = () => {
   const lowStockAlerts = useMemo(() => {
     const deptNames = ["Taar", "Chain", "KDM"] as const;
     const alerts: {
-      [x: string]: ReactNode;
       dept: string;
       available: number;
       isLow: boolean;
@@ -348,7 +347,7 @@ export const JobCreation = () => {
 
     if (isSubmitting) return;
     setIsSubmitting(true);
-    setIsRefreshing(true); // Start refreshing immediately for instant feedback
+    setIsSyncing(true); // Start syncing immediately for inline feedback
 
     try {
       const now = new Date();
@@ -360,37 +359,7 @@ export const JobCreation = () => {
       const seconds = now.getSeconds().toString().padStart(2, "0");
       const timestamp = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
 
-      // 1️⃣ Optimistic local state update (Instant UI)
-      let lastPN = 0;
-      jobs.forEach(job => {
-        if (job.jobId && job.jobId.startsWith("PN-")) {
-          const num = parseInt(job.jobId.replace("PN-", ""), 10);
-          if (!isNaN(num) && num > lastPN) lastPN = num;
-        }
-      });
-      const tempSerial = `PN-${String(lastPN + 1).padStart(3, "0")}`;
-
-      const newJob: any = {
-        jobId: tempSerial,
-        orderNo: formData.orderNo,
-        designCode: formData.designCode,
-        customer: formData.customer,
-        totalWeight: formData.totalWeight,
-        metalType: formData.metalType,
-        stage: "Created",
-        karigarName: formData.karigarName,
-        category: formData.category,
-        createdAt: now,
-        updatedAt: now,
-        departments: departments.map((d, index) => ({
-          ...d,
-          id: `${tempSerial}-${index + 1}`,
-          masterColM: timestamp, // Added: Ensure it appears in Department Issue instantly
-          remainingWeight: d.plannedWeight || "0.000"
-        }))
-      };
-
-      addJob(newJob);
+      // (Optimistic Updates intentionally removed. The UI will explicitly wait for background sync)
 
       // 2️⃣ Instant UI Feedback - Close modal & show success immediately
       setShowModal(false);
@@ -445,7 +414,7 @@ export const JobCreation = () => {
           console.error("Background sync failed:", err);
         })
         .finally(() => {
-          setIsRefreshing(false);
+          setIsSyncing(false);
         });
 
     } catch (error) {
@@ -479,7 +448,7 @@ export const JobCreation = () => {
   );
 
   return (
-    <div className="flex flex-col gap-4 h-[calc(100vh-57px-28px-2rem)] md:h-[calc(100vh-57px-28px-3rem)]">
+    <div className="flex flex-col gap-4 h-auto md:h-[calc(100vh-57px-28px-3rem)]">
       {isLoading ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
@@ -551,10 +520,10 @@ export const JobCreation = () => {
           )}
 
           {/* Main Table Interface */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col flex-1 min-h-0">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 md:overflow-hidden md:flex-1 md:min-h-0 flex flex-col">
 
             {/* Toolbar */}
-            <div className="px-3 py-3 border-b border-gray-100 bg-gray-50/60">
+            <div className="sticky top-0 z-10 px-3 py-3 border-b border-gray-100 bg-white md:bg-gray-50/60">
               <div className="flex flex-col gap-3">
                 {/* Top Row: Title + Button */}
                 <div className="flex items-center justify-between gap-3">
@@ -593,16 +562,7 @@ export const JobCreation = () => {
             </div>
 
             {/* Table Content */}
-            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar relative">
-              {/* Mini table loading overlay after submit */}
-              {isRefreshing && (
-                <div className="absolute inset-0 z-10 bg-white/70 backdrop-blur-[2px] flex items-center justify-center">
-                  <div className="flex items-center gap-2.5 bg-white border border-gray-200 rounded-xl px-4 py-2.5 shadow-md">
-                    <div className="w-4 h-4 border-2 border-amber-200 border-t-amber-500 rounded-full animate-spin shrink-0" />
-                    <span className="text-sm font-semibold text-gray-600">Updating...</span>
-                  </div>
-                </div>
-              )}
+            <div className="md:flex-1 md:min-h-0 md:overflow-y-auto custom-scrollbar relative">
               
               {/* Desktop Table */}
               <div className="hidden md:block overflow-x-auto">
@@ -638,6 +598,17 @@ export const JobCreation = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 bg-white">
+                    {/* Syncing Loader Row */}
+                    {isSyncing && (
+                      <tr>
+                        <td colSpan={9} className="py-2.5 bg-amber-50/50 border-b border-amber-100">
+                          <div className="flex items-center justify-center gap-2">
+                            <div className="w-4 h-4 border-2 border-amber-400 border-t-amber-600 rounded-full animate-spin"></div>
+                            <span className="text-[13px] font-bold text-amber-800">Saving Data...</span>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                     {filteredJobs.length === 0 ? (
                       <tr>
                         <td colSpan={9} className="py-20 text-center">
@@ -704,6 +675,13 @@ export const JobCreation = () => {
 
               {/* Mobile Card View */}
               <div className="md:hidden p-4 space-y-3">
+                {/* Syncing Loader Card */}
+                {isSyncing && (
+                  <div className="py-3 px-4 bg-amber-50/50 border-2 border-dashed border-amber-200 rounded-xl flex items-center justify-center gap-2 animate-pulse">
+                    <div className="w-4 h-4 border-2 border-amber-400 border-t-amber-600 rounded-full animate-spin"></div>
+                    <span className="text-sm font-bold text-amber-800 uppercase tracking-widest">Saving Data...</span>
+                  </div>
+                )}
                 {filteredJobs.length === 0 ? (
                   <div className="py-20 text-center">
                     <div className="flex flex-col items-center gap-2 opacity-40">
@@ -768,9 +746,9 @@ export const JobCreation = () => {
 
           {/* New Job Modal */}
           {showModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
               <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowModal(false)} />
-              <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-100 transition-all">
+              <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[95vh] flex flex-col overflow-hidden border border-gray-100 transition-all">
                 {/* Modal Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white shrink-0 z-20">
                   <div className="flex items-center gap-3">
@@ -791,9 +769,9 @@ export const JobCreation = () => {
                 </div>
 
                 {/* Modal Body & Footer Wrapper */}
-                <form onSubmit={handleSubmit} className="flex flex-col" autoComplete="off">
-                  {/* Content Area - No Scroll */}
-                  <div className="p-4 space-y-2.5">
+                <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0" autoComplete="off">
+                  {/* Content Area - Scrollable */}
+                  <div className="p-4 space-y-2.5 overflow-y-auto flex-1 min-h-0">
 
                     {/* Basic Details Section */}
                     <div className="space-y-2">
@@ -833,7 +811,10 @@ export const JobCreation = () => {
                               {isOrderDropdownOpen && (
                                 <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto custom-scrollbar">
                                   {productionOrders
-                                    .filter(order => order[1]?.toLowerCase().includes(orderSearchText.toLowerCase()))
+                                    .filter(order => {
+                                      const colS = parseFloat(String(order[18] ?? 0));
+                                      return colS > 0 && order[1]?.toLowerCase().includes(orderSearchText.toLowerCase());
+                                    })
                                     .map((order, idx) => (
                                       <div
                                         key={`${order[1]}-${idx}`}
@@ -847,7 +828,10 @@ export const JobCreation = () => {
                                         <div className="text-[11px] text-gray-500 truncate">{order[2]}</div>
                                       </div>
                                     ))}
-                                  {productionOrders.filter(order => order[1]?.toLowerCase().includes(orderSearchText.toLowerCase())).length === 0 && (
+                                  {productionOrders.filter(order => {
+                                    const colS = parseFloat(String(order[18] ?? 0));
+                                    return colS > 0 && order[1]?.toLowerCase().includes(orderSearchText.toLowerCase());
+                                  }).length === 0 && (
                                     <div className="px-3 py-2 text-xs text-gray-500 text-center">No orders found</div>
                                   )}
                                 </div>

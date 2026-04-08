@@ -1043,9 +1043,9 @@ export const KarigarIssue = () => {
 
           {/* Issue Modal */}
           {showIssueModal && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4">
               <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowIssueModal(false)} />
-              <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-100 animate-in fade-in slide-in-from-bottom-5 duration-300">
+              <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[95vh] flex flex-col overflow-hidden border border-gray-100 animate-in fade-in slide-in-from-bottom-5 duration-300">
                 {/* Modal Header */}
                 <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between bg-white shrink-0">
                   <div className="flex items-center gap-3">
@@ -1095,7 +1095,10 @@ export const KarigarIssue = () => {
                               {isOrderDropdownOpen && (
                                 <div className="absolute z-[110] w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto custom-scrollbar">
                                   {productionOrders
-                                    .filter(order => order[1]?.toLowerCase().includes(orderSearchText.toLowerCase()))
+                                    .filter(order => {
+                                      const colT = parseFloat(String(order[19] ?? 0));
+                                      return colT > 0 && order[1]?.toLowerCase().includes(orderSearchText.toLowerCase());
+                                    })
                                     .map((order, idx) => (
                                       <div
                                         key={`${order[1]}-${idx}`}
@@ -1105,7 +1108,10 @@ export const KarigarIssue = () => {
                                         {order[1]}
                                       </div>
                                     ))}
-                                  {productionOrders.filter(order => order[1]?.toLowerCase().includes(orderSearchText.toLowerCase())).length === 0 && (
+                                  {productionOrders.filter(order => {
+                                    const colT = parseFloat(String(order[19] ?? 0));
+                                    return colT > 0 && order[1]?.toLowerCase().includes(orderSearchText.toLowerCase());
+                                  }).length === 0 && (
                                     <div className="px-4 py-3 text-[12px] text-gray-500 text-center uppercase tracking-widest font-black opacity-40 italic">No orders found</div>
                                   )}
                                 </div>
