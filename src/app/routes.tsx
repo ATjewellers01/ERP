@@ -8,6 +8,8 @@ import { DepartmentIssue } from "./pages/DepartmentIssue";
 import { KarigarIssue } from "./pages/KarigarIssue";
 import { DepartmentReturn } from "./pages/DepartmentReturn";
 import { StockSummary } from "./pages/StockSummary";
+import { Settings } from "./pages/Settings";
+import { License } from "./pages/License";
 import { NotFound } from "./pages/NotFound";
 import { Layout } from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -21,44 +23,56 @@ const DashboardPage = () => (
 );
 
 const ProcurementPage = () => (
-  <ProtectedRoute allowedRoles={["Admin", "Production Head"]}>
+  <ProtectedRoute allowedRoles={["Admin", "Production Head", "user"]}>
     <GoldProcurement />
   </ProtectedRoute>
 );
 
 const AlloyConversionPage = () => (
-  <ProtectedRoute allowedRoles={["Admin", "Production Head"]}>
+  <ProtectedRoute allowedRoles={["Admin", "Production Head", "user"]}>
     <AlloyConversion />
   </ProtectedRoute>
 );
 
 const JobCreationPage = () => (
-  <ProtectedRoute allowedRoles={["Admin", "Production Head", "Dept Manager"]}>
+  <ProtectedRoute allowedRoles={["Admin", "Production Head", "Dept Manager", "user"]}>
     <JobCreation />
   </ProtectedRoute>
 );
 
 const DepartmentIssuePage = () => (
-  <ProtectedRoute allowedRoles={["Admin", "Production Head", "Dept Manager"]}>
+  <ProtectedRoute allowedRoles={["Admin", "Production Head", "Dept Manager", "user"]}>
     <DepartmentIssue />
   </ProtectedRoute>
 );
 
 const KarigarIssuePage = () => (
-  <ProtectedRoute allowedRoles={["Admin", "Production Head", "Dept Manager"]}>
+  <ProtectedRoute allowedRoles={["Admin", "Production Head", "Dept Manager", "user"]}>
     <KarigarIssue />
   </ProtectedRoute>
 );
 
 const DepartmentReturnPage = () => (
-  <ProtectedRoute allowedRoles={["Admin", "Production Head", "Dept Manager", "Karigar"]}>
+  <ProtectedRoute allowedRoles={["Admin", "Production Head", "Dept Manager", "Karigar", "user"]}>
     <DepartmentReturn />
   </ProtectedRoute>
 );
 
 const StockSummaryPage = () => (
-  <ProtectedRoute allowedRoles={["Admin", "Production Head", "Dept Manager"]}>
+  <ProtectedRoute allowedRoles={["Admin", "Production Head", "Dept Manager", "user"]}>
     <StockSummary />
+  </ProtectedRoute>
+);
+
+const SettingsPage = () => (
+  <ProtectedRoute allowedRoles={["Admin", "user"]}>
+    <Settings />
+  </ProtectedRoute>
+);
+
+const LicensePage = () => (
+  <ProtectedRoute allowedRoles={["Admin", "Production Head", "Dept Manager", "Karigar", "QC", "user"]}>
+    <License />
   </ProtectedRoute>
 );
 
@@ -106,6 +120,14 @@ export const createRouter = () => createBrowserRouter([
           {
             path: "stock-summary",
             Component: StockSummaryPage,
+          },
+          {
+            path: "settings",
+            Component: SettingsPage,
+          },
+          {
+            path: "license",
+            Component: LicensePage,
           },
         ],
       },

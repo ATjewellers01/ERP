@@ -14,6 +14,8 @@ import {
   Menu,
   X,
   Gem,
+  Settings,
+  KeyRound,
 } from "lucide-react";
 
 export const Layout = () => {
@@ -32,55 +34,71 @@ export const Layout = () => {
       name: "Dashboard",
       path: "/dashboard",
       icon: LayoutDashboard,
-      roles: ["Admin", "Production Head", "Dept Manager", "Karigar", "QC"],
+      roles: ["Admin", "Production Head", "Dept Manager", "Karigar", "QC", "user"],
     },
     {
       name: "24k Metal Stock",
       path: "/procurement",
       icon: Package,
-      roles: ["Admin", "Production Head"],
+      roles: ["Admin", "Production Head", "user"],
     },
     {
       name: "Alloy Conversion",
       path: "/alloy-conversion",
       icon: Flame,
-      roles: ["Admin", "Production Head"],
+      roles: ["Admin", "Production Head", "user"],
     },
     {
       name: "Production Planning",
       path: "/job-creation",
       icon: ClipboardList,
-      roles: ["Admin", "Production Head", "Dept Manager"],
+      roles: ["Admin", "Production Head", "Dept Manager", "user"],
     },
     {
       name: "Department Issue",
       path: "/department-issue",
       icon: ArrowRightLeft,
-      roles: ["Admin", "Production Head", "Dept Manager"],
+      roles: ["Admin", "Production Head", "Dept Manager", "user"],
     },
     {
       name: "Department Receipt",
       path: "/department-return",
       icon: ArrowLeftRight,
-      roles: ["Admin", "Production Head", "Dept Manager", "Karigar"],
+      roles: ["Admin", "Production Head", "Dept Manager", "Karigar", "user"],
     },
     {
       name: "Karigar Issue",
       path: "/karigar-issue",
       icon: UserCheck,
-      roles: ["Admin", "Production Head", "Dept Manager"],
+      roles: ["Admin", "Production Head", "Dept Manager", "user"],
     },
     {
       name: "Stock Summary",
       path: "/stock-summary",
       icon: FileText,
-      roles: ["Admin", "Production Head", "Dept Manager"],
+      roles: ["Admin", "Production Head", "Dept Manager", "user"],
+    },
+    {
+      name: "Settings",
+      path: "/settings",
+      icon: Settings,
+      roles: ["Admin", "user"],
+    },
+    {
+      name: "License",
+      path: "/license",
+      icon: KeyRound,
+      roles: ["Admin", "Production Head", "Dept Manager", "Karigar", "QC", "user"],
     },
   ];
 
-  const allowedNavigation = navigation.filter(
-    (item) => user && item.roles.includes(user.role)
-  );
+  const allowedNavigation = navigation.filter((item) => {
+    if (!user) return false;
+    const hasRole = item.roles.includes(user.role);
+    const hasPageAccess =
+      user.pageAccess.includes("All") || user.pageAccess.includes(item.name);
+    return hasRole && hasPageAccess;
+  });
 
   // Bottom tab bar shows first 5 allowed items
   const bottomTabs = allowedNavigation.slice(0, 5);

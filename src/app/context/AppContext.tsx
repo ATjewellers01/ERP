@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 import { fetchAllSheetsParallel, fetchSheet, invalidateCache, ALL_SHEETS } from "../services/api";
 import { calculateKaratStock } from "../utils/calculations";
 
-export type UserRole = "Admin" | "Production Head" | "Dept Manager" | "Karigar" | "QC";
+export type UserRole = "Admin" | "Production Head" | "Dept Manager" | "Karigar" | "QC" | "user";
 
 export type JobStage = "Created" | "Issued" | "In Progress" | "Returned" | "Completed";
 
@@ -18,6 +18,9 @@ interface User {
   email: string;
   role: UserRole;
   pageAccess: string[];
+  password?: string;
+  phoneNumber?: string;
+  rowIndex: number;
 }
 
 export interface JobDepartment {
@@ -146,6 +149,7 @@ interface AppContextType {
   user: User | null;
   // login: (username: string, password: string, role: UserRole) => boolean;
   setProcurementEntries: React.Dispatch<React.SetStateAction<ProcurementEntry[]>>;
+  users: User[];
   isAuthLoading: boolean;
 
   login: (username: string, password: string) => Promise<boolean>;
@@ -228,6 +232,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [departmentIssues, setDepartmentIssues] = useState<DepartmentIssueEntry[]>([]);
   const [departmentReturns, setDepartmentReturns] = useState<DepartmentReturnEntry[]>([]);
   const [procurementEntries, setProcurementEntries] = useState<ProcurementEntry[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [conversionEntries, setConversionEntries] = useState<ConversionEntry[]>([]);
   const [karigarLedger, setKarigarLedger] = useState<any[]>([]);
   const [productionOrders, setProductionOrders] = useState<any[]>([]);
@@ -259,7 +264,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     try {
       // Restore user session from localStorage
-      const savedUser = localStorage.getItem("erp_user");
+      const savedUser = localStorage.getItem("user_erp");
       if (savedUser) {
         try {
           setUser(JSON.parse(savedUser));
@@ -719,6 +724,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setMasterAuthorizers(Array.from(new Set(authorizers as string[])));
       }
 
+      // 9. Process Login Master (Users)
+      if (sheets["Login Master"] && sheets["Login Master"].success) {
+        const rows = sheets["Login Master"].data as any[][];
+        const formattedUsers: User[] = rows.slice(1)
+          .filter(row => row[1] && String(row[1]).trim() !== "")
+          .map((row, index) => ({
+            userId: String(row[1] || ""),
+            username: String(row[2] || ""),
+            password: String(row[3] || ""),
+            role: (row[4] || "user") as UserRole,
+            phoneNumber: String(row[5] || ""),
+            email: String(row[6] || ""),
+            pageAccess: typeof row[7] === "string" ? row[7].split(",").map((p: string) => p.trim()) : ["All"],
+            rowIndex: index + 2 // Header is row 1, slice starts from row 2
+          }));
+        setUsers(formattedUsers);
+      }
+
       // 9. Calculate final stock totals using reusable utility for Karats
       // Formula: Total = AlloyConversion[I] - ProductionPlanning[P] + DepartmentIssue[L] - KarigarIssue[H]
       const total22K = calculateKaratStock("22K", convResult.data, prodResult.data, issueResult.data, karigarResult.data);
@@ -780,36 +803,39 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       for (let i = 1; i < rows.length; i++) {
         const row = rows[i];
 
-        const sheetUsername = row[1]; // Column B
-        const sheetPassword = row[3]; // Column D
-        const sheetRole = row[4];     // Column E
-        const sheetUserId = row[0];   // Column A
-        const sheetEmail = row[2];    // Column C
-        const sheetPageAccess = row[5]; // Column F
-
+        const sheetUserId = String(row[1] || "").trim();      // Column B
+        const sheetUsername = String(row[2] || "").trim();    // Column C
+        const sheetPassword = String(row[3] || "").trim();    // Column D
+        const sheetRole = String(row[4] || "user").trim();    // Column E
+        const sheetEmail = String(row[6] || "").trim();       // Column G
+        const sheetPageAccess = String(row[7] || "").trim();  // Column H
 
         let parsedPageAccess: string[] = [];
 
-        if (typeof sheetPageAccess === "string" && sheetPageAccess.trim() !== "") {
+        if (sheetPageAccess !== "") {
           parsedPageAccess = sheetPageAccess
             .split(",")
             .map((p: string) => p.trim());
+        } else {
+          parsedPageAccess = ["All"];
         }
 
+        // Allow login with either User ID or User Name
         if (
-          sheetUsername === username &&
+          (sheetUserId === username || sheetUsername === username) &&
           sheetPassword === password
         ) {
-          const userData = {
+          const userData: User = {
             userId: sheetUserId,
             username: sheetUsername,
             email: sheetEmail,
             role: sheetRole as UserRole,
             pageAccess: parsedPageAccess,
+            rowIndex: i + 1 // loop starts from 1, i is already the 0-based row index in the sheet? No, rows[i] is row index.
           };
 
           setUser(userData);
-          localStorage.setItem("erp_user", JSON.stringify(userData));
+          localStorage.setItem("user_erp", JSON.stringify(userData));
           return true;
         }
       }
@@ -823,7 +849,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("erp_user");
+    localStorage.removeItem("user_erp");
   };
 
 
@@ -943,6 +969,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setDepartmentReturns,
         alloyStock,
         liveDepartmentStock,
+        users,
       }}
     >
       {children}
@@ -989,6 +1016,7 @@ export const useApp = () => {
         addConversionEntry: () => { },
         setKarigarLedger: () => { },
         karigarLedger: [],
+        users: [],
         productionOrders: [],
         setProductionOrders: () => { },
         masterKarigars: [],
