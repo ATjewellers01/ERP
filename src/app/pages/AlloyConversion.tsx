@@ -53,6 +53,7 @@ export const AlloyConversion = () => {
   const [errorMessage, setErrorMessage] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const [formData, setFormData] = useState({
     productionPlan: "",
@@ -227,47 +228,33 @@ export const AlloyConversion = () => {
 
   // 🔴 REAL-TIME STOCK VALIDATION - Check on input change
   useEffect(() => {
+    let errorMsg = "";
+
     if (formData.input24KWeight && formData.input24KPurity) {
-      const input24K = parseFloat(formData.input24KWeight);
+      const input24K = parseFloat(formData.input24KWeight) || 0;
       const purity = parseFloat(formData.input24KPurity);
 
-      // Check if stock card has no value (zero or empty)
-      if (purity === 99.9 && (stockData.stock24K_999 || 0) <= 0) {
-        const msg = `ALERT: No 99.9% 24K stock available!\n\nAvailable: 0.00g\n\nPlease add 24K metal stock first before recording conversion.`;
-        alert(msg);
-        setErrorMessage(msg);
-        setShowError(true);
-        setFormData(prev => ({ ...prev, input24KWeight: "" }));
-        return;
+      if (purity === 99.9) {
+        if ((stockData.stock24K_999 || 0) <= 0) {
+          errorMsg = `ALERT: No 99.9% 24K stock available!\n\nAvailable: 0.00g\n\nPlease add 24K metal stock first before recording conversion.`;
+        } else if (input24K > (stockData.stock24K_999 || 0)) {
+          errorMsg = `ALERT: Insufficient 99.9% 24K stock!\n\nRequested: ${input24K}g\nAvailable: ${stockData.stock24K_999 || 0}g\n\nPlease add 24K metal stock first before recording conversion.`;
+        }
+      } else if (purity === 99.5) {
+        if ((stockData.stock24K_995 || 0) <= 0) {
+          errorMsg = `ALERT: No 99.5% 24K stock available!\n\nAvailable: 0.00g\n\nPlease add 24K metal stock first before recording conversion.`;
+        } else if (input24K > (stockData.stock24K_995 || 0)) {
+          errorMsg = `ALERT: Insufficient 99.5% 24K stock!\n\nRequested: ${input24K}g\nAvailable: ${stockData.stock24K_995 || 0}g\n\nPlease add 24K metal stock first before recording conversion.`;
+        }
       }
+    }
 
-      if (purity === 99.5 && (stockData.stock24K_995 || 0) <= 0) {
-        const msg = `ALERT: No 99.5% 24K stock available!\n\nAvailable: 0.00g\n\nPlease add 24K metal stock first before recording conversion.`;
-        alert(msg);
-        setErrorMessage(msg);
-        setShowError(true);
-        setFormData(prev => ({ ...prev, input24KWeight: "" }));
-        return;
-      }
-
-      // Check if requested amount exceeds available stock (real-time)
-      if (purity === 99.9 && input24K > (stockData.stock24K_999 || 0)) {
-        const msg = `ALERT: Insufficient 99.9% 24K stock!\n\nRequested: ${input24K}g\nAvailable: ${(stockData.stock24K_999 || 0)}g\n\nPlease add 24K metal stock first before recording conversion.`;
-        alert(msg);
-        setErrorMessage(msg);
-        setShowError(true);
-        setFormData(prev => ({ ...prev, input24KWeight: "" }));
-        return;
-      }
-
-      if (purity === 99.5 && input24K > (stockData.stock24K_995 || 0)) {
-        const msg = `ALERT: Insufficient 99.5% 24K stock!\n\nRequested: ${input24K}g\nAvailable: ${(stockData.stock24K_995 || 0)}g\n\nPlease add 24K metal stock first before recording conversion.`;
-        alert(msg);
-        setErrorMessage(msg);
-        setShowError(true);
-        setFormData(prev => ({ ...prev, input24KWeight: "" }));
-        return;
-      }
+    if (errorMsg) {
+      setErrorMessage(errorMsg);
+      setShowError(true);
+    } else {
+      setShowError(false);
+      setErrorMessage("");
     }
   }, [formData.input24KWeight, formData.input24KPurity, stockData.stock24K_999, stockData.stock24K_995]);
 
@@ -289,7 +276,6 @@ export const AlloyConversion = () => {
     // Check if stock card has no value (zero or empty)
     if (purity === 99.9 && (stockData.stock24K_999 || 0) <= 0) {
       const msg = `ALERT: No 99.9% 24K stock available!\n\nRequested: ${input24K}g\nAvailable: ${stockData.stock24K_999 || 0}g\n\nPlease add 24K metal stock first before recording conversion.`;
-      alert(msg);
       setErrorMessage(msg);
       setShowError(true);
       return; // ⛔ STOP SUBMISSION
@@ -297,7 +283,6 @@ export const AlloyConversion = () => {
 
     if (purity === 99.5 && (stockData.stock24K_995 || 0) <= 0) {
       const msg = `ALERT: No 99.5% 24K stock available!\n\nRequested: ${input24K}g\nAvailable: ${stockData.stock24K_995 || 0}g\n\nPlease add 24K metal stock first before recording conversion.`;
-      alert(msg);
       setErrorMessage(msg);
       setShowError(true);
       return; // ⛔ STOP SUBMISSION
@@ -306,7 +291,6 @@ export const AlloyConversion = () => {
     // Check if requested amount exceeds available stock
     if (purity === 99.9 && input24K > (stockData.stock24K_999 || 0)) {
       const msg = `ALERT: Insufficient 99.9% 24K stock!\n\nRequested: ${input24K}g\nAvailable: ${stockData.stock24K_999 || 0}g\n\nPlease add 24K metal stock first before recording conversion.`;
-      alert(msg);
       setErrorMessage(msg);
       setShowError(true);
       return; // ⛔ STOP SUBMISSION
@@ -314,7 +298,6 @@ export const AlloyConversion = () => {
 
     if (purity === 99.5 && input24K > (stockData.stock24K_995 || 0)) {
       const msg = `ALERT: Insufficient 99.5% 24K stock!\n\nRequested: ${input24K}g\nAvailable: ${stockData.stock24K_995 || 0}g\n\nPlease add 24K metal stock first before recording conversion.`;
-      alert(msg);
       setErrorMessage(msg);
       setShowError(true);
       return; // ⛔ STOP SUBMISSION
@@ -350,76 +333,13 @@ export const AlloyConversion = () => {
             ? "KDM"
             : "Bangle";
 
-      // 1️⃣ Optimistic Stock Update
-      const updates: Record<string, number> = {
-        stock24K: stockData.stock24K - input24K,
-      };
-
-      if (purity === 99.9)
-        updates.stock24K_999 = stockData.stock24K_999 - input24K;
-      else if (purity === 99.5)
-        updates.stock24K_995 = stockData.stock24K_995 - input24K;
-
-      if (formData.targetKarat === "22K")
-        updates.stock22K = stockData.stock22K + actualOutput;
-      else if (formData.targetKarat === "20K")
-        updates.stock20K = stockData.stock20K + actualOutput;
-      else if (formData.targetKarat === "18K")
-        updates.stock18K = stockData.stock18K + actualOutput;
-
-      updateStock(updates);
-
-      // 2️⃣ Optimistic Entry Update
-      let lastAC = 0;
-      conversionEntries.forEach(entry => {
-        if (entry.serialNo && entry.serialNo.startsWith("AC-")) {
-          const num = parseInt(entry.serialNo.replace("AC-", ""), 10);
-          if (!isNaN(num) && num > lastAC) lastAC = num;
-        }
-      });
-      const nextSerialNo = `AC-${String(lastAC + 1).padStart(3, "0")}`;
-
-      const expectedOutputStr = alloyFormula.expectedOutput.toString();
-      const outputWeightStr = formData.actualOutputWeight;
-      const lossWeightStr = formData.meltingLossWeight;
-      const expectedOutputNum = parseFloat(expectedOutputStr) || 0;
-      const lossWeightNum = parseFloat(lossWeightStr) || 0;
-      const lossPercent = expectedOutputNum > 0 ? ((lossWeightNum / expectedOutputNum) * 100).toFixed(3) : "0.00";
-
-      const newEntry: ConversionEntry = {
-        id: `TEMP-${Date.now()}`,
-        serialNo: nextSerialNo,
-        timestamp: timestamp,
-        date: displayDate,
-        productionPlan: productionPlanName,
-        targetKarat: formData.targetKarat,
-        batchNumber: formData.batchNumber,
-        inputWeight: formData.input24KWeight,
-        purity: `${formData.input24KPurity}%`,
-        expectedOutput: expectedOutputStr,
-        outputWeight: outputWeightStr,
-        lossWeight: lossWeightStr,
-        lossPercent: lossPercent,
-      };
-
-      setConversionEntries([newEntry, ...conversionEntries]);
-
+      // (Optimistic Updates intentionally removed. The UI will explicitly wait for background sync)
       // 3️⃣ Instant UI Feedback
       setShowModal(false);
       setShowSuccess(true);
-      setTimeout(() => {
-        setShowSuccess(false);
-        setFormData({
-          productionPlan: "",
-          targetKarat: "22K",
-          batchNumber: "",
-          input24KPurity: "99.9",
-          input24KWeight: "",
-          actualOutputWeight: "",
-          meltingLossWeight: "",
-        });
-      }, 2000);
+      setTimeout(() => setShowSuccess(false), 2000);
       setIsSubmitting(false);
+      setIsSyncing(true);
 
       // 4️⃣ Background Execution (Sheet Insert)
       const backgroundTask = async () => {
@@ -450,14 +370,25 @@ export const AlloyConversion = () => {
 
         invalidateCache("Alloy Converstion");
         invalidateCache("24K Metal Stock");
-        setTimeout(() => fetchAllData(true), 1200);
+        setTimeout(async () => {
+           try {
+             await fetchAllData(true);
+           } catch(e) {
+             console.error(e);
+           } finally {
+             setIsSyncing(false);
+           }
+        }, 1200);
       };
 
-      backgroundTask().catch((err) => console.error("Conversion Background Error:", err));
+      backgroundTask().catch((err) => {
+        console.error("Conversion Background Error:", err);
+        setIsSyncing(false);
+      });
 
     } catch (error) {
       console.error("Conversion Error:", error);
-      alert("Something went wrong while saving.");
+      console.error("Save error:", error);
       setIsSubmitting(false);
     }
   };
@@ -684,19 +615,7 @@ export const AlloyConversion = () => {
             <div className="flex-1 min-h-0 overflow-y-auto">
               {/* Desktop Table */}
               <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-base table-fixed">
-                  <colgroup>
-                    <col className="w-32" /> {/* Timestamp */}
-                    <col className="w-24" /> {/* Serial No */}
-                    <col className="w-36" /> {/* Production Plan */}
-                    <col className="w-28" /> {/* Target Karat */}
-                    <col className="w-36" /> {/* Batch Number */}
-                    <col className="w-32" /> {/* 24K Input */}
-                    <col className="w-24" /> {/* Purity */}
-                    <col className="w-32" /> {/* Expected Output */}
-                    <col className="w-32" /> {/* Actual Output */}
-                    <col className="w-32" /> {/* Estimated Loss */}
-                  </colgroup>
+                <table className="w-full text-base table-auto">
                   <thead className="sticky top-0 z-10 bg-gray-50">
                     <tr className="border-b border-gray-200">
                       {[
@@ -721,6 +640,19 @@ export const AlloyConversion = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 bg-white">
+                    {/* Syncing Loader Row */}
+                    {isSyncing && (
+                      <tr className="animate-pulse">
+                        <td colSpan={10} className="py-2.5 bg-amber-50/50 border-b border-amber-100">
+                          <div className="flex items-center justify-center gap-2">
+                            <div className="w-4 h-4 border-2 border-amber-400 border-t-amber-600 rounded-full animate-spin"></div>
+                            <span className="text-[13px] font-bold text-amber-800">
+                              Saving Data & Syncing Stock...
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                     {filteredEntries.length === 0 ? (
                       <tr>
                         <td colSpan={10} className="py-20 text-center">
@@ -829,6 +761,15 @@ export const AlloyConversion = () => {
 
               {/* Mobile Card View */}
               <div className="md:hidden p-4 space-y-4">
+                {/* Syncing Loader Mobile */}
+                {isSyncing && (
+                  <div className="flex items-center justify-center gap-2 py-2.5 bg-amber-50/50 rounded-xl border border-amber-100 animate-pulse">
+                    <div className="w-4 h-4 border-2 border-amber-400 border-t-amber-600 rounded-full animate-spin"></div>
+                    <span className="text-[13px] font-bold text-amber-800">
+                      Syncing Stock...
+                    </span>
+                  </div>
+                )}
                 {filteredEntries.map((entry) => (
                   <div
                     key={entry.id}
