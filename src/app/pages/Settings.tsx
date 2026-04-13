@@ -212,8 +212,17 @@ export const Settings = () => {
           </div>
           <button 
             onClick={() => {
+              const nextID = `SN-${String(users.length + 1).padStart(3, "0")}`;
               setEditingUser(null);
-              setFormData({ userId: "", username: "", password: "", role: "" as any, phoneNumber: "", email: "", pageAccess: "All" });
+              setFormData({ 
+                userId: nextID, 
+                username: "", 
+                password: "", 
+                role: "" as any, 
+                phoneNumber: "", 
+                email: "", 
+                pageAccess: "All" 
+              });
               setShowModal(true);
             }}
             className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-600 text-white rounded-xl text-sm font-bold shadow-md shadow-amber-400/20 hover:scale-[1.02] transition-transform active:scale-95 shrink-0"
@@ -270,7 +279,7 @@ export const Settings = () => {
                         </div>
                         <div>
                           <p className="text-sm font-bold text-gray-900">{u.username}</p>
-                          <p className="text-[11px] font-mono text-gray-400 uppercase tracking-tighter">{u.userId}</p>
+                          <p className="text-[11px] font-mono text-gray-400 tracking-tighter">{u.userId}</p>
                         </div>
                       </div>
                     </td>
@@ -298,7 +307,7 @@ export const Settings = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1.5 font-mono text-xs text-gray-600 bg-gray-50 px-2.5 py-1 rounded-md w-fit border border-gray-100">
                         <Lock className="w-3 h-3 text-gray-400" />
-                        <span>{u.password}</span>
+                        <span>{"•".repeat(u.password?.length || 8)}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 w-64">
@@ -350,7 +359,7 @@ export const Settings = () => {
                     </div>
                     <div>
                       <p className="text-[15px] font-bold text-gray-900">{u.username}</p>
-                      <p className="text-xs font-mono text-gray-400 uppercase tracking-tighter">{u.userId}</p>
+                      <p className="text-xs font-mono text-gray-400 tracking-tighter">{u.userId}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -378,7 +387,7 @@ export const Settings = () => {
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Password</p>
                     <div className="flex items-center gap-1.5 font-mono text-xs text-gray-600 bg-gray-50 px-2 py-0.5 rounded border border-gray-100 w-fit">
                        <Lock className="w-3 h-3 text-gray-400" />
-                       <span>{u.password}</span>
+                       <span>{"•".repeat(u.password?.length || 8)}</span>
                     </div>
                   </div>
                   <div className="space-y-1">
@@ -442,8 +451,11 @@ export const Settings = () => {
                       name="userId"
                       value={formData.userId}
                       onChange={handleChange}
+                      readOnly={!editingUser} // Auto-generated for new users
                       placeholder="User ID"
-                      className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-400 outline-none text-sm font-medium"
+                      className={`w-full pl-10 pr-4 py-2 border rounded-xl outline-none text-sm font-medium ${
+                        !editingUser ? "bg-amber-50/50 border-amber-200 text-amber-900 cursor-not-allowed" : "bg-gray-50 border-gray-200 focus:ring-2 focus:ring-amber-400"
+                      }`}
                     />
                   </div>
                 </div>

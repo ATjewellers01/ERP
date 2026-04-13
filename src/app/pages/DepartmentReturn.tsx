@@ -172,6 +172,13 @@ export const DepartmentReturn = () => {
       setShortage(parseFloat(shortageAmount.toFixed(3)));
       setRecovery(parseFloat(recoveryPercent.toFixed(3)));
       setShowVarianceAlert(currentEntryTotal > 0 && recoveryPercent < 98);
+
+      // Auto-select Return Type based on recovery
+      if (recoveryPercent >= 100) {
+        setReturnCloseStatus("CompleteReturn");
+      } else {
+        setReturnCloseStatus("PartlyReturn");
+      }
     }
   }, [formData, selectedIssue, selectedIssueReturnAttempts]);
 
