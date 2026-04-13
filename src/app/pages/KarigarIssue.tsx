@@ -1096,8 +1096,8 @@ export const KarigarIssue = () => {
                                 <div className="absolute z-[110] w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto custom-scrollbar">
                                   {productionOrders
                                     .filter(order => {
-                                      const colT = parseFloat(String(order[19] ?? 0));
-                                      return colT > 0 && order[1]?.toLowerCase().includes(orderSearchText.toLowerCase());
+                                      const colU = parseFloat(String(order[20] ?? 0));
+                                      return colU > 0 && order[1]?.toLowerCase().includes(orderSearchText.toLowerCase());
                                     })
                                     .map((order, idx) => (
                                       <div
@@ -1109,8 +1109,8 @@ export const KarigarIssue = () => {
                                       </div>
                                     ))}
                                   {productionOrders.filter(order => {
-                                    const colT = parseFloat(String(order[19] ?? 0));
-                                    return colT > 0 && order[1]?.toLowerCase().includes(orderSearchText.toLowerCase());
+                                    const colU = parseFloat(String(order[20] ?? 0));
+                                    return colU > 0 && order[1]?.toLowerCase().includes(orderSearchText.toLowerCase());
                                   }).length === 0 && (
                                     <div className="px-4 py-3 text-[12px] text-gray-500 text-center uppercase tracking-widest font-black opacity-40 italic">No orders found</div>
                                   )}
