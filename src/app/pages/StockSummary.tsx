@@ -410,7 +410,7 @@ export const StockSummary = () => {
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-md">
                   <Layers className="w-5 h-5 text-white" />
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900">Stock Summary</h2>
@@ -485,7 +485,7 @@ export const StockSummary = () => {
 
           {/* ── Current Metal Stock ───────────────────────────────────────────── */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="bg-gradient-to-r from-amber-400 to-yellow-500 px-6 py-4 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-amber-400 to-yellow-500 px-4 py-2 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Flame className="w-5 h-5 text-white" />
                 <h3 className="text-base font-bold text-white">
@@ -501,18 +501,14 @@ export const StockSummary = () => {
               {stockCards.map((card) => (
                 <div
                   key={card.label}
-                  className={`relative rounded-xl overflow-hidden ring-2 ${card.ring} shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-1`}
+                  className={`relative rounded-xl overflow-hidden border border-amber-200 bg-white p-4 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-1`}
                 >
-                  <div className={`bg-gradient-to-br ${card.gradient} p-3`}>
-                    <p className="text-white/90 text-xs font-semibold">{card.label}</p>
-                  </div>
-                  <div className="bg-white px-3 py-3">
-                    <p className={`text-xl font-bold ${card.textColor}`}>
-                      {fmt2(card.value)}
-                      <span className="text-sm ml-0.5">g</span>
-                    </p>
-                    <p className="text-xs text-gray-500 mt-0.5">{card.sublabel}</p>
-                  </div>
+                  <p className="text-gray-500 text-[11px] font-bold uppercase tracking-wider">{card.label}</p>
+                  <p className={`text-xl font-black mt-1 ${card.textColor}`}>
+                    {fmt2(card.value)}
+                    <span className="text-sm ml-0.5 font-bold">g</span>
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">{card.sublabel}</p>
                 </div>
               ))}
             </div>
@@ -671,7 +667,7 @@ export const StockSummary = () => {
 
           {/* ── Karigar Issue Report ──────────────────────────────────────────── */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="bg-gradient-to-r from-indigo-500 to-blue-600 px-6 py-4 flex items-center gap-3">
+            <div className="bg-gradient-to-r from-amber-400 to-amber-500 px-4 py-2 flex items-center gap-3">
               <UserCheck className="w-5 h-5 text-white" />
               <h3 className="text-base font-bold text-white">Department Issue Report</h3>
             </div>
@@ -688,10 +684,11 @@ export const StockSummary = () => {
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-gray-50 border-b border-gray-200">
+              <div className="max-h-[380px] overflow-y-auto overflow-x-hidden custom-scrollbar">
+                {/* Desktop View */}
+                <table className="w-full hidden sm:table">
+                  <thead className="sticky top-0 z-10 bg-gradient-to-r from-amber-50 to-yellow-50 border-b-2 border-amber-200">
+                    <tr>
                       {[
                         { label: "Karigar Name", align: "left" },
                         { label: "Total Jobs", align: "center" },
@@ -701,7 +698,7 @@ export const StockSummary = () => {
                       ].map((col) => (
                         <th
                           key={col.label}
-                          className={`py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide text-${col.align}`}
+                          className={`py-2 px-4 text-[11px] font-bold text-amber-900 uppercase tracking-wider text-${col.align}`}
                         >
                           {col.label}
                         </th>
@@ -718,7 +715,7 @@ export const StockSummary = () => {
                           {karigar.karigarName}
                         </td>
                         <td className="py-3 px-4 text-center">
-                          <span className="inline-flex items-center justify-center min-w-[2rem] h-7 px-2 rounded-full bg-indigo-100 text-indigo-700 font-semibold text-sm">
+                          <span className="inline-flex items-center justify-center min-w-[2rem] h-7 px-2 rounded-full bg-amber-100 text-amber-700 font-semibold text-sm">
                             {karigar.totalJobs}
                           </span>
                         </td>
@@ -739,13 +736,48 @@ export const StockSummary = () => {
                     ))}
                   </tbody>
                 </table>
+
+                {/* Mobile Cards View */}
+                <div className="sm:hidden space-y-3 p-4 bg-gray-50">
+                  {karigarIssueStats.map((karigar: any) => (
+                    <div
+                      key={karigar.karigarName}
+                      className="bg-white rounded-xl shadow-sm border-l-4 border-amber-500 overflow-hidden hover:shadow-md transition-shadow"
+                    >
+                      <div className="px-4 py-3 bg-amber-50/30 border-b border-amber-100 flex justify-between items-center">
+                        <span className="font-bold text-gray-900">{karigar.karigarName}</span>
+                        <div className="flex gap-2">
+                          <span className="text-[10px] font-black uppercase tracking-widest bg-white/80 border border-amber-200 px-2 py-0.5 rounded text-amber-700">
+                            {karigar.totalJobs} Jobs
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-4 grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Weight</p>
+                          <p className="text-sm font-black text-gray-800">{karigar.totalWeight.toFixed(3)} g</p>
+                        </div>
+                        <div className="flex justify-end gap-3">
+                          <div className="text-center">
+                            <p className="text-[10px] font-bold text-orange-500 uppercase tracking-widest">Pending</p>
+                            <p className="text-sm font-black text-orange-700">{karigar.pendingJobs}</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Done</p>
+                            <p className="text-sm font-black text-emerald-700">{karigar.completedJobs}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
 
           {/* ── Karigar Issue Report ────────────────────────────────────────── */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="bg-gradient-to-r from-indigo-600 to-blue-700 px-6 py-4 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-amber-400 to-amber-500 px-4 py-2 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Users className="w-5 h-5 text-white" />
                 <h3 className="text-base font-bold text-white uppercase tracking-wider">
@@ -772,10 +804,11 @@ export const StockSummary = () => {
                 </div>
               </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200">
+            <div className="max-h-[380px] overflow-y-auto overflow-x-hidden custom-scrollbar">
+              {/* Desktop View */}
+              <table className="w-full hidden sm:table">
+                <thead className="sticky top-0 z-10 bg-gradient-to-r from-amber-50 to-yellow-50 border-b-2 border-amber-200">
+                  <tr>
                     {[
                       { label: "Order No.", align: "left" },
                       { label: "Total Wt (g)", align: "right" },
@@ -790,7 +823,7 @@ export const StockSummary = () => {
                     ].map((col) => (
                       <th
                         key={col.label}
-                        className={`py-3 px-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest text-${col.align}`}
+                        className={`py-2 px-4 text-[11px] font-bold text-amber-900 uppercase tracking-wider text-${col.align}`}
                       >
                         {col.label}
                       </th>
@@ -808,7 +841,7 @@ export const StockSummary = () => {
                     filteredKarigarLedger.map((item) => (
                       <tr key={item.id} className="hover:bg-indigo-50/30 transition-colors duration-150">
                         <td className="py-4 px-4">
-                          <span className="font-bold text-indigo-700 text-xs">{item.orderNo}</span>
+                          <span className="font-bold text-amber-700 text-xs">{item.orderNo}</span>
                         </td>
                         <td className="py-4 px-4 text-right">
                           <span className="text-xs font-bold text-gray-900">{fmt3(parseFloat(item.totalWeight) || 0)}</span>
@@ -837,40 +870,97 @@ export const StockSummary = () => {
                           <span className="text-xs text-gray-600">{fmt3(parseFloat(item.kdm) || 0)}</span>
                         </td>
                         <td className="py-4 px-4 text-right">
-                          <span className="text-sm font-black text-indigo-700">{fmt3(parseFloat(item.fineWeight) || 0)}</span>
+                          <span className="text-sm font-black text-amber-700">{fmt3(parseFloat(item.fineWeight) || 0)}</span>
                         </td>
                       </tr>
                     ))
                   )}
                 </tbody>
               </table>
+
+              {/* Mobile Cards View */}
+              <div className="sm:hidden space-y-4 p-4 bg-gray-50">
+                {filteredKarigarLedger.length === 0 ? (
+                  <div className="py-8 text-center text-gray-400 italic">No records found</div>
+                ) : (
+                  filteredKarigarLedger.map((item) => (
+                    <div
+                      key={item.id}
+                      className="bg-white rounded-xl shadow-sm border border-gray-200 border-l-4 border-amber-600 overflow-hidden"
+                    >
+                      <div className="px-4 py-3 bg-amber-50/50 border-b border-amber-100 flex justify-between items-center">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest leading-none mb-1">Order #</span>
+                          <span className="font-black text-gray-900 leading-none">{item.orderNo}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Karigar</span>
+                          <span className="text-xs font-bold text-gray-700">{item.karigarName}</span>
+                        </div>
+                      </div>
+                      <div className="p-4 space-y-3">
+                        <div className="flex justify-between items-end border-b border-gray-100 pb-2">
+                          <div>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Total Weight</span>
+                            <span className="text-sm font-black text-gray-900">{fmt3(parseFloat(item.totalWeight) || 0)}g</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 uppercase">
+                              {item.meltingType}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-y-2 gap-x-4">
+                          {[
+                            { label: "Direct", val: item.directMetal },
+                            { label: "Die", val: item.die },
+                            { label: "Chain", val: item.chain },
+                            { label: "Taar", val: item.taar },
+                            { label: "KDM", val: item.kdm },
+                          ].map(metal => (
+                            <div key={metal.label} className="flex justify-between items-center text-[11px]">
+                              <span className="text-gray-400 font-bold uppercase">{metal.label}:</span>
+                              <span className="text-gray-700 font-semibold">{fmt3(parseFloat(metal.val) || 0)}g</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-2 pt-2 border-t border-amber-100 flex justify-between items-center">
+                          <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Return Fine Wt:</span>
+                          <span className="text-base font-black text-amber-700">{fmt3(parseFloat(item.fineWeight) || 0)}g</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
 
-          {/* ── Department-wise Stock Details ─────────────────────────────────── */}
+          {/* ── Live Department Stock Details ─────────────────────────────────── */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="bg-gradient-to-r from-purple-600 to-violet-600 px-6 py-4 flex items-center gap-3">
+            <div className="bg-gradient-to-r from-amber-400 to-amber-500 px-4 py-2 flex items-center gap-3">
               <Factory className="w-5 h-5 text-white" />
               <h3 className="text-base font-bold text-white">
                 Live Department Stock — by Metal Type
               </h3>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="py-3 px-5 text-left text-xs font-bold text-gray-500 uppercase tracking-widest w-36">
+            <div className="max-h-[380px] overflow-y-auto overflow-x-hidden custom-scrollbar">
+              {/* Desktop View */}
+              <table className="w-full hidden sm:table">
+                <thead className="sticky top-0 z-10 bg-gradient-to-r from-amber-50 to-yellow-50 border-b-2 border-amber-200">
+                  <tr>
+                    <th className="py-2 px-5 text-left text-[11px] font-bold text-amber-900 uppercase tracking-wider w-36">
                       Metaltype
                     </th>
                     {["Die", "Taar", "Chain", "KDM"].map((dept) => (
                       <th
                         key={dept}
-                        className="py-3 px-5 text-center text-xs font-bold text-gray-500 uppercase tracking-widest"
+                        className="py-2 px-5 text-center text-[11px] font-bold text-amber-900 uppercase tracking-wider"
                       >
                         {dept}
                       </th>
                     ))}
-                    <th className="py-3 px-5 text-center text-xs font-bold text-gray-500 uppercase tracking-widest bg-purple-50">
+                    <th className="py-2 px-5 text-center text-[11px] font-bold text-amber-900 uppercase tracking-wider bg-transparent">
                       Total
                     </th>
                   </tr>
@@ -902,16 +992,16 @@ export const StockSummary = () => {
                             <span className="text-xs text-gray-400 ml-0.5">g</span>
                           </td>
                         ))}
-                        <td className="py-4 px-5 text-center bg-purple-50">
-                          <span className="text-base font-black text-purple-700">{fmt2(rowTotal)}</span>
-                          <span className="text-xs text-purple-400 ml-0.5">g</span>
+                        <td className="py-4 px-5 text-center bg-amber-50">
+                          <span className="text-base font-black text-amber-700">{fmt2(rowTotal)}</span>
+                          <span className="text-xs text-amber-400 ml-0.5">g</span>
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
                 <tfoot>
-                  <tr className="bg-gray-100 border-t-2 border-gray-200">
+                  <tr className="bg-gray-100 border-t-2 border-gray-200 sticky bottom-0 z-10">
                     <td className="py-3 px-5 text-sm font-black text-gray-700 uppercase tracking-wide">
                       Total
                     </td>
@@ -927,19 +1017,64 @@ export const StockSummary = () => {
                         </td>
                       );
                     })}
-                    <td className="py-3 px-5 text-center bg-purple-100">
-                      <span className="text-sm font-black text-purple-800">
+                    <td className="py-3 px-5 text-center bg-amber-100">
+                      <span className="text-sm font-black text-amber-800">
                         {fmt2(
                           (["Die", "Taar", "Chain", "KDM"] as const).reduce((s, d) =>
                             s + (["22K", "20K", "18K"] as const).reduce((ss, m) => ss + (liveDepartmentStock[m]?.[d] || 0), 0)
                             , 0)
                         )}
                       </span>
-                      <span className="text-xs text-purple-500 ml-0.5">g</span>
+                      <span className="text-xs text-amber-500 ml-0.5">g</span>
                     </td>
                   </tr>
                 </tfoot>
               </table>
+
+              {/* Mobile Cards View */}
+              <div className="sm:hidden space-y-4 p-4 bg-gray-50">
+                {(["22K", "20K", "18K"] as const).map((metal) => {
+                  const die = liveDepartmentStock[metal]?.["Die"] || 0;
+                  const taar = liveDepartmentStock[metal]?.["Taar"] || 0;
+                  const chain = liveDepartmentStock[metal]?.["Chain"] || 0;
+                  const kdm = liveDepartmentStock[metal]?.["KDM"] || 0;
+                  const rowTotal = die + taar + chain + kdm;
+                  const metalColors: Record<string, string> = {
+                    "22K": "border-l-amber-500 bg-amber-50/30",
+                    "20K": "border-l-rose-500 bg-rose-50/30",
+                    "18K": "border-l-red-500 bg-red-50/30",
+                  };
+                  return (
+                    <div
+                      key={metal}
+                      className={`bg-white rounded-xl shadow-sm border border-gray-200 border-l-4 ${metalColors[metal]} overflow-hidden`}
+                    >
+                      <div className="px-4 py-3 border-b flex justify-between items-center bg-white/50">
+                        <span className="text-lg font-black text-gray-900">{metal}</span>
+                        <div className="text-right">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Total stock</span>
+                          <span className="text-base font-black text-amber-700">{fmt2(rowTotal)}g</span>
+                        </div>
+                      </div>
+                      <div className="p-4 grid grid-cols-2 gap-4">
+                        {[
+                          { label: "Die", val: die },
+                          { label: "Taar", val: taar },
+                          { label: "Chain", val: chain },
+                          { label: "KDM", val: kdm },
+                        ].map(dept => (
+                          <div key={dept.label} className="bg-gray-50/50 p-2 rounded-lg border border-gray-100">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">{dept.label}</span>
+                            <span className={`text-sm font-bold ${dept.val > 0 ? "text-gray-900" : "text-gray-300"}`}>
+                              {fmt2(dept.val)}g
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
 

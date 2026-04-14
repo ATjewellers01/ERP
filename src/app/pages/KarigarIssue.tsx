@@ -761,36 +761,36 @@ export const KarigarIssue = () => {
           )}
 
           {/* Page Header */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-3 py-3 mb-4">
-            <div className="flex flex-col gap-3">
-              {/* Top Row: Icon + Title + Button */}
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="w-9 h-9 bg-orange-500 rounded-xl flex items-center justify-center shadow-md shadow-orange-200 shrink-0">
-                    <UserCheck className="w-4 h-4 text-white shrink-0" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h2 className="text-base font-black text-gray-900 uppercase tracking-tight truncate">Karigar Assignment</h2>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Issue work to karigars</p>
-                  </div>
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 py-3 mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              {/* Left: Icon + Title */}
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-md shadow-orange-200 shrink-0">
+                  <UserCheck className="w-5 h-5 text-white shrink-0" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-base sm:text-lg font-black text-gray-900 uppercase tracking-tight truncate">Karigar Assignment</h2>
+                  <p className="text-[10px] sm:text-[11px] font-bold text-gray-400 uppercase tracking-widest">Issue work</p>
+                </div>
+              </div>
+
+              {/* Right: Search Bar + Assign Button */}
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="relative flex-1 sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 shrink-0" />
+                  <input
+                    type="text" placeholder="Search orders..." value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-[13px] font-bold outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white transition-all shadow-inner"
+                  />
                 </div>
                 <button
                   onClick={() => { resetForm(); setShowIssueModal(true); }}
-                  className="flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl text-[11px] font-black uppercase shadow-lg shadow-orange-200 hover:shadow-xl active:scale-95 transition-all shrink-0"
+                  className="flex items-center justify-center gap-1.5 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl text-[12px] font-black uppercase shadow-lg shadow-orange-200 hover:shadow-xl active:scale-95 transition-all shrink-0"
                 >
                   <Plus className="w-4 h-4 shrink-0" />
                   <span className="whitespace-nowrap">Assign</span>
                 </button>
-              </div>
-              
-              {/* Bottom Row: Search Bar */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 shrink-0" />
-                <input
-                  type="text" placeholder="Search orders, karigar..." value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-[13px] font-bold outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white transition-all"
-                />
               </div>
             </div>
           </div>

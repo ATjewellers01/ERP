@@ -129,40 +129,6 @@ export const KarigarReceipt = () => {
           </button>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg px-4 py-3">
-            <p className="text-xs text-blue-600 font-medium">Total Entries</p>
-            <p className="text-xl font-bold text-blue-900 mt-1">
-              {filteredReceipts.length}
-            </p>
-          </div>
-          <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-lg px-4 py-3">
-            <p className="text-xs text-green-600 font-medium">Total Pcs</p>
-            <p className="text-xl font-bold text-green-900 mt-1">
-              {totalPcs.toFixed(0)}
-            </p>
-          </div>
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-lg px-4 py-3">
-            <p className="text-xs text-purple-600 font-medium">Fine Weight</p>
-            <p className="text-xl font-bold text-purple-900 mt-1">
-              {totalFineWeight.toFixed(3)}
-            </p>
-          </div>
-          <div className="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-lg px-4 py-3">
-            <p className="text-xs text-orange-600 font-medium">Search</p>
-            <div className="relative mt-1">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Order, Karigar..."
-                className="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Table Section */}
