@@ -203,7 +203,7 @@ export const DepartmentReturn = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedIssue || isSubmitting) return;
+    if (!selectedIssue || isSubmitting || recovery !== 100) return;
 
     const isComplete = returnCloseStatus === "CompleteReturn";
     const now = new Date();
@@ -500,7 +500,7 @@ export const DepartmentReturn = () => {
                         <button type="button" onClick={() => setShowReturnModal(false)} className="px-4 py-1.5 text-gray-400 font-bold text-[13px] uppercase transition-colors hover:text-gray-600">Cancel</button>
                         <button
                           type="submit"
-                          disabled={(!formData.finishedPartsWeight && selectedIssueReturnAttempts.length === 0) || isSubmitting}
+                          disabled={(!formData.finishedPartsWeight && selectedIssueReturnAttempts.length === 0) || isSubmitting || recovery !== 100}
                           className="px-6 py-1.5 bg-orange-500 text-white rounded-lg font-bold text-[13px] uppercase shadow-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:bg-orange-600"
                         >
                           {isSubmitting ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
