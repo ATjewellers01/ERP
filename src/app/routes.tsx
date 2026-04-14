@@ -6,6 +6,7 @@ import { AlloyConversion } from "./pages/AlloyConversion";
 import { JobCreation } from "./pages/JobCreation";
 import { DepartmentIssue } from "./pages/DepartmentIssue";
 import { KarigarIssue } from "./pages/KarigarIssue";
+import { KarigarReceipt } from "./pages/KarigarReceipt";
 import { DepartmentReturn } from "./pages/DepartmentReturn";
 import { StockSummary } from "./pages/StockSummary";
 import { Settings } from "./pages/Settings";
@@ -49,6 +50,12 @@ const DepartmentIssuePage = () => (
 const KarigarIssuePage = () => (
   <ProtectedRoute allowedRoles={["Admin", "Production Head", "Dept Manager", "user"]}>
     <KarigarIssue />
+  </ProtectedRoute>
+);
+
+const KarigarReceiptPage = () => (
+  <ProtectedRoute allowedRoles={["Admin", "Production Head", "Dept Manager", "user"]}>
+    <KarigarReceipt />
   </ProtectedRoute>
 );
 
@@ -112,6 +119,10 @@ export const createRouter = () => createBrowserRouter([
           {
             path: "karigar-issue",
             Component: KarigarIssuePage,
+          },
+          {
+            path: "karigar-receipt",
+            Component: KarigarReceiptPage,
           },
           {
             path: "department-return",

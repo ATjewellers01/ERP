@@ -73,6 +73,12 @@ export const Layout = () => {
       roles: ["Admin", "Production Head", "Dept Manager", "user"],
     },
     {
+      name: "Karigar Receipt",
+      path: "/karigar-receipt",
+      icon: FileText,
+      roles: ["Admin", "Production Head", "Dept Manager", "user"],
+    },
+    {
       name: "Stock Summary",
       path: "/stock-summary",
       icon: FileText,

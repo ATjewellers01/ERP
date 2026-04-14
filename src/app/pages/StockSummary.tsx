@@ -12,13 +12,16 @@ import {
   BarChart3,
   ArrowRight,
   Sparkles,
+  Search,
+  Filter,
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
 
 export const StockSummary = () => {
-  const { jobs, stockData, liveDepartmentStock, departmentIssues, fetchAllData } = useApp();
+  const { jobs, stockData, liveDepartmentStock, departmentIssues, karigarLedger, fetchAllData } = useApp();
   const hasRefreshed = useRef(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [orderFilter, setOrderFilter] = useState("All");
 
   // Refresh data on mount and when navigating to this page (only once per session)
   useEffect(() => {
@@ -234,6 +237,30 @@ export const StockSummary = () => {
     });
   }, [jobs, deptNames]);
 
+  // ─── Karigar Weight Balance Overview ──────────────────────────────────────
+  const karigarWeightBalance = useMemo(() => {
+    const balance: Record<string, { issued: number; returned: number }> = {};
+
+    jobs.forEach((job) => {
+      job.departments.forEach((dept) => {
+        const karigar = String(dept.karigarAssigned || "").trim();
+        if (karigar && dept.status === "Issued") {
+          if (!balance[karigar]) {
+            balance[karigar] = { issued: 0, returned: 0 };
+          }
+          balance[karigar].issued += (dept.issuedWeight || 0);
+          balance[karigar].returned += (dept.returnedWeight || 0);
+        }
+      });
+    });
+
+    return Object.entries(balance).map(([name, data]) => ({
+      karigarName: name,
+      issuedWeight: data.issued,
+      remainingWeight: Math.max(0, data.issued - data.returned),
+    })).sort((a, b) => b.remainingWeight - a.remainingWeight);
+  }, [jobs]);
+
   // ─── Karigar Stats derived from live jobs ─────────────────────────────────
   const karigarIssueStats = useMemo(() => {
     const karigarData: Record<
@@ -297,6 +324,19 @@ export const StockSummary = () => {
       })),
     })).sort((a, b) => b.totalWeight - a.totalWeight);
   }, [jobs]);
+
+  const filteredKarigarLedger = useMemo(() => {
+    if (!orderFilter || orderFilter === "All") return karigarLedger;
+    return karigarLedger.filter(item => String(item.orderNo) === orderFilter);
+  }, [karigarLedger, orderFilter]);
+
+  const uniqueOrderNumbers = useMemo(() => {
+    const orders = new Set<string>();
+    karigarLedger.forEach(item => {
+      if (item.orderNo) orders.add(String(item.orderNo));
+    });
+    return Array.from(orders).sort();
+  }, [karigarLedger]);
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
   const fmt2 = (v: number) =>
@@ -441,6 +481,7 @@ export const StockSummary = () => {
               </div>
             ))}
           </div>
+
 
           {/* ── Current Metal Stock ───────────────────────────────────────────── */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -632,7 +673,7 @@ export const StockSummary = () => {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="bg-gradient-to-r from-indigo-500 to-blue-600 px-6 py-4 flex items-center gap-3">
               <UserCheck className="w-5 h-5 text-white" />
-              <h3 className="text-base font-bold text-white">Karigar Issue Report</h3>
+              <h3 className="text-base font-bold text-white">Department Issue Report</h3>
             </div>
             {karigarIssueStats.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
@@ -700,6 +741,110 @@ export const StockSummary = () => {
                 </table>
               </div>
             )}
+          </div>
+
+          {/* ── Karigar Issue Report ────────────────────────────────────────── */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-gradient-to-r from-indigo-600 to-blue-700 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Users className="w-5 h-5 text-white" />
+                <h3 className="text-base font-bold text-white uppercase tracking-wider">
+                  Karigar Issue Report
+                </h3>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg border border-white/20">
+                  <Filter className="w-4 h-4 text-white/70" />
+                  <select
+                    value={orderFilter}
+                    onChange={(e) => setOrderFilter(e.target.value)}
+                    className="bg-transparent text-sm font-bold text-white outline-none cursor-pointer"
+                  >
+                    <option value="All" className="text-gray-900 font-medium">All Orders</option>
+                    {uniqueOrderNumbers.map(no => (
+                      <option key={no} value={no} className="text-gray-900 font-medium">{no}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="hidden md:flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg border border-white/20">
+                  <span className="text-xs font-bold text-white/80 uppercase">Records:</span>
+                  <span className="text-sm font-black text-white">{filteredKarigarLedger.length}</span>
+                </div>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    {[
+                      { label: "Order No.", align: "left" },
+                      { label: "Total Wt (g)", align: "right" },
+                      { label: "Melting Type", align: "center" },
+                      { label: "Karigar", align: "left" },
+                      { label: "Direct (g)", align: "right" },
+                      { label: "Die (g)", align: "right" },
+                      { label: "Chain (g)", align: "right" },
+                      { label: "Taar (g)", align: "right" },
+                      { label: "KDM (g)", align: "right" },
+                      { label: "Return Fine Wt (g)", align: "right" },
+                    ].map((col) => (
+                      <th
+                        key={col.label}
+                        className={`py-3 px-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest text-${col.align}`}
+                      >
+                        {col.label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredKarigarLedger.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="py-12 text-center text-gray-400 font-medium italic">
+                        No matching karigar issue records found
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredKarigarLedger.map((item) => (
+                      <tr key={item.id} className="hover:bg-indigo-50/30 transition-colors duration-150">
+                        <td className="py-4 px-4">
+                          <span className="font-bold text-indigo-700 text-xs">{item.orderNo}</span>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <span className="text-xs font-bold text-gray-900">{fmt3(parseFloat(item.totalWeight) || 0)}</span>
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                            {item.meltingType}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className="font-bold text-gray-700 text-xs">{item.karigarName}</span>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <span className="text-xs text-gray-600">{fmt3(parseFloat(item.directMetal) || 0)}</span>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <span className="text-xs text-gray-600">{fmt3(parseFloat(item.die) || 0)}</span>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <span className="text-xs text-gray-600">{fmt3(parseFloat(item.chain) || 0)}</span>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <span className="text-xs text-gray-600">{fmt3(parseFloat(item.taar) || 0)}</span>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <span className="text-xs text-gray-600">{fmt3(parseFloat(item.kdm) || 0)}</span>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <span className="text-sm font-black text-indigo-700">{fmt3(parseFloat(item.fineWeight) || 0)}</span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* ── Department-wise Stock Details ─────────────────────────────────── */}
