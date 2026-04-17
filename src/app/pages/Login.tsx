@@ -117,6 +117,21 @@ export const Login = () => {
         {/*   */}
       </div >
 
+      {/* ── Fixed Footer ─────────────────────────────── */}
+      <footer className="fixed bottom-0 left-0 right-0 z-30 h-9 flex items-center justify-center bg-white border-t border-gray-200">
+        <p className="text-sm text-gray-500">
+          Powered by{" "}
+          <a
+            href="https://www.botivate.in"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-amber-600 hover:text-amber-700 hover:underline transition-colors"
+          >
+            Botivate
+          </a>
+        </p>
+      </footer>
+
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
@@ -365,6 +380,18 @@ export const Login = () => {
           .lp-card { padding: 2rem 1.6rem; }
           .lp-logo-icon { width: 58px; height: 58px; font-size: 1.8rem; }
           .lp-brand { font-size: 1.25rem; }
+        }
+
+        /* ── Footer ─────────────────────────────── */
+        .lp-footer {
+          position: absolute;
+          bottom: 1.5rem;
+          text-align: center;
+          width: 100%;
+          font-size: 0.8rem;
+          color: #78716c;
+          font-weight: 600;
+          z-index: 10;
         }
       `}</style>
     </div >

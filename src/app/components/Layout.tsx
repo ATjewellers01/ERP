@@ -259,7 +259,7 @@ export const Layout = () => {
       {/* ── Body ─────────────────────────────────────── */}
       <div className="flex flex-1 min-h-0">
         {/* Desktop Sidebar */}
-        <aside className="hidden md:block w-64 bg-white border-r border-gray-200 h-[calc(100vh-57px-28px)] sticky top-[57px] self-start overflow-y-auto">
+        <aside className="hidden md:block w-64 bg-white border-r border-gray-200 h-[calc(100vh-57px-36px)] sticky top-[57px] self-start overflow-y-auto">
           <nav className="p-4 space-y-0.5">
             {allowedNavigation.map((item) => {
               const Icon = item.icon;
@@ -282,7 +282,7 @@ export const Layout = () => {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-4 md:p-6 min-w-0 overflow-y-auto h-[calc(100vh-57px-28px)] pb-10 md:pb-6">
+        <main className="flex-1 p-4 md:p-6 min-w-0 overflow-y-auto h-[calc(100vh-57px-36px)] pb-10 md:pb-6">
           <Outlet />
         </main>
       </div>
@@ -312,8 +312,8 @@ export const Layout = () => {
       </nav>
 
       {/* ── Fixed Footer ─────────────────────────────── */}
-      <footer className="fixed bottom-0 left-0 right-0 z-30 h-7 flex items-center justify-center bg-white border-t border-gray-200">
-        <p className="text-xs text-gray-500">
+      <footer className="fixed bottom-0 left-0 right-0 z-30 h-9 flex items-center justify-center bg-white border-t border-gray-200">
+        <p className="text-sm text-gray-500">
           Powered by{" "}
           <a
             href="https://www.botivate.in"
