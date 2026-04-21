@@ -290,24 +290,23 @@ export const DepartmentReturn = () => {
           }
 
           // TASK 2: Insert new record (IF Partly Return)
-          // We use 'update' with rowIndex = rows.length + 1 to bypass backend auto-serial generation
+          // Use 'insert' so backend auto-generates a new unique IS-NO
           if (!isComplete) {
             const newRowData = Array(17).fill("");
             newRowData[0] = timestamp;
-            newRowData[1] = selectedIssue.isNumber || ""; // PRESERVE IS-NO
+            newRowData[1] = "";                            // B: Leave blank — backend auto-generates IS-NO
             newRowData[2] = selectedIssue.serialNo;
             newRowData[3] = selectedIssue.orderNo;
             newRowData[4] = formData.scrapWeight || "0";
             newRowData[5] = selectedIssue.karigarName;
             newRowData[6] = selectedIssue.authorizedBy;
-            newRowData[7] = ""; // Column H Blank
+            newRowData[7] = "";  // Column H Blank
             newRowData[15] = selectedIssue.dept || "";
             newRowData[16] = ""; // Column Q Blank
 
             const insertForm = new URLSearchParams();
-            insertForm.append("action", "update"); // USE UPDATE TO BYPASS SERIAL LOGIC
+            insertForm.append("action", "insert");
             insertForm.append("sheetName", "Department Issue");
-            insertForm.append("rowIndex", (rows.length + 1).toString());
             insertForm.append("rowData", JSON.stringify(newRowData));
 
             await fetch(SCRIPT_URL, { 
@@ -345,7 +344,16 @@ export const DepartmentReturn = () => {
 
   return (
     <div className="flex flex-col gap-4 h-[calc(100vh-57px-28px-2rem)] md:h-[calc(100vh-57px-28px-3rem)] relative animate-in fade-in duration-500">
-      <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/50 rounded-full blur-3xl -z-10 opacity-60" />
+      {isLoading ? (
+        <div className="flex-1 flex items-center justify-center min-h-[60vh]">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+            <p className="text-sm font-semibold text-gray-600">Loading fresh data...</p>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/50 rounded-full blur-3xl -z-10 opacity-60" />
 
           {showSuccess && (() => {
             const isLowRecovery = (lastSubmission?.recovery ?? 100) < 100;
@@ -490,13 +498,13 @@ export const DepartmentReturn = () => {
           )}
 
           <div className="flex-1 overflow-hidden flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 transition-all relative">
-            {/* Professional Table Loader (Initial Load & Syncing) */}
-            {(isLoading || isSyncing) && (
+            {/* Syncing Loader Overlay (background sync only) */}
+            {isSyncing && (
               <div className="absolute inset-0 z-[60] flex items-center justify-center bg-white/70 backdrop-blur-[2px] animate-in fade-in duration-300">
                 <div className="flex items-center gap-4 px-8 py-5 bg-white rounded-2xl shadow-xl border border-gray-100 min-w-[200px]">
                   <div className="w-6 h-6 border-3 border-orange-200 border-t-orange-600 rounded-full animate-spin"></div>
                   <div className="flex flex-col">
-                    <p className="text-sm font-bold text-gray-900 uppercase tracking-wide">{isSyncing ? "Syncing..." : "Loading..."}</p>
+                    <p className="text-sm font-bold text-gray-900 uppercase tracking-wide">Syncing...</p>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mt-0.5">Please wait</p>
                   </div>
                 </div>
@@ -688,8 +696,10 @@ export const DepartmentReturn = () => {
               </div>
             </div>
           </div>
-      </div>
-    );
+        </>
+      )}
+    </div>
+  );
 };
 
 export default DepartmentReturn;

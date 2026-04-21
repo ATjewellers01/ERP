@@ -178,7 +178,7 @@ export const KarigarReceipt = () => {
                     Ghat Wastage
                   </th>
                   <th className="px-4 py-3 text-right text-[11px] font-bold text-amber-900 uppercase tracking-wider">
-                    Fine Weight
+                    Total Weight
                   </th>
                 </tr>
               </thead>
