@@ -26,7 +26,7 @@ export const SCRIPT_BASE =
  * 30s is a safe default for a jewellery ERP — data changes slowly relative
  * to how often users navigate between pages.
  */
-const DEFAULT_TTL_MS = 30_000; // 30 seconds
+const DEFAULT_TTL_MS = 2_000; // 2 seconds (Reduced from 30s to satisfy manual edit reflection)
 
 interface CacheEntry {
   data: any;

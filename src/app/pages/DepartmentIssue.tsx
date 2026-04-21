@@ -36,9 +36,11 @@ export const DepartmentIssue = () => {
     conversionEntries,
     departmentIssues,
     setDepartmentIssues,
+    departmentReturns,
     alloyStock,
     masterKarigars,
-    masterAuthorizers
+    masterAuthorizers,
+    mainBreakdown
   } = useApp();
 
   const [isLoading, setIsLoading] = useState(true);
@@ -68,12 +70,13 @@ export const DepartmentIssue = () => {
   const [filterStatus, setFilterStatus] = useState("");
 
   const [activeTab, setActiveTab] = useState<"Pending" | "History">("Pending");
-  const [formData, setFormData] = useState({
+ const [formData, setFormData] = useState({
     goldIssued: "",
     karigarAssigned: "",
     meltingType: "22K",
     authorizedBy: "",
     remainingWeightOverride: "",
+    displayRemaining: "",
   });
 
   const [showSuccess, setShowSuccess] = useState(false);
@@ -127,10 +130,8 @@ export const DepartmentIssue = () => {
         : true;
 
       // Pending tab: Show jobs that have departments with Col M but NOT Col N
-      const hasPending = job.departments.some(d => hasValue(d.masterColM) && !hasValue(d.masterColN));
-      // History tab: Show jobs that have at least one department with Col N
-      const hasHistory = job.departments.some(d => hasValue(d.masterColN));
-
+      const hasPending = job.departments.some(d => parseFloat(d.remainingWeight || "0") > 0);
+      const hasHistory = job.departments.some(d => parseFloat(d.remainingWeight || "0") <= 0 && hasValue(d.masterColN));
       const matchTab = activeTab === "Pending" ? hasPending : hasHistory;
 
       return matchSearch && matchDept && matchStatusFilter && matchTab;
@@ -144,22 +145,24 @@ export const DepartmentIssue = () => {
     return s !== "" && s !== "null" && s !== "undefined";
   }
 
-  // Get all jobs that have departments with "Pending" status for selection in the form
-  const availableJobs = useMemo(() => {
-    return jobs.filter((job) =>
-      job.departments.some((dept) => hasValue(dept.masterColM) && !hasValue(dept.masterColN)),
-    );
-  }, [jobs]);
+const availableJobs = useMemo(() => {
+  return jobs.filter((job) =>
+    job.departments.some((dept) => 
+      hasValue(dept.masterColM) && parseFloat(dept.remainingWeight || "0") > 0
+    ),
+  );
+}, [jobs]);
 
   const filteredJobsForSelection = useMemo(() => {
     if (!selectedDept) return availableJobs;
-    return availableJobs.filter((job) =>
-      job.departments.some(
-        (dept) =>
-          dept.dept === selectedDept &&
-          hasValue(dept.masterColM) && !hasValue(dept.masterColN),
-      ),
-    );
+  return availableJobs.filter((job) =>
+  job.departments.some(
+    (dept) =>
+      dept.dept === selectedDept &&
+      hasValue(dept.masterColM) && 
+      parseFloat(dept.remainingWeight || "0") > 0,
+  ),
+);
   }, [availableJobs, selectedDept]);
 
   const selectedJob = jobs.find(
@@ -205,7 +208,9 @@ export const DepartmentIssue = () => {
 
         const totalCount = allDepts.length;
         // Issue Pending: Assigned (Col M) but not yet Issued (Col N)
-        const issuePending = allDepts.filter((d) => hasValue(d.masterColM) && !hasValue(d.masterColN)).length;
+       const issuePending = allDepts.filter((d) => 
+  hasValue(d.masterColM) && parseFloat(d.remainingWeight || "0") > 0
+).length;
         // Return Pending: Is currently 'Issued'
         const returnPending = allDepts.filter((d) => d.status === "Issued").length;
 
@@ -279,6 +284,7 @@ export const DepartmentIssue = () => {
       meltingType: job?.metalType || "22K",
       authorizedBy: "",
       remainingWeightOverride: "",
+      displayRemaining: "",
     });
   };
 
@@ -289,17 +295,18 @@ export const DepartmentIssue = () => {
       const dept = job.departments.find((d) => d.id === deptId);
       if (dept) {
         const remaining = parseFloat(dept.remainingWeight || "0");
-        setFormData({
-          ...formData,
-          goldIssued: "",
-          remainingWeightOverride: remaining > 0 ? remaining.toFixed(3) : "0.000",
-          meltingType: job.metalType || "22K"
-        });
+     setFormData({
+  ...formData,
+  goldIssued: "",
+  remainingWeightOverride: remaining > 0 ? remaining.toFixed(3) : "0.000",
+  displayRemaining: remaining > 0 ? remaining.toFixed(3) : "0.000",
+  meltingType: job.metalType || "22K"
+});
       }
     }
   };
 
-  const handleIssueGoldDirectly = (item: any) => {
+ const handleIssueGoldDirectly = (item: any) => {
     setSelectedJobId(item.jobId);
     setSelectedDept(item.dept);
     setSelectedJobDeptId(item.id);
@@ -308,6 +315,7 @@ export const DepartmentIssue = () => {
     setFormData({
       goldIssued: "",
       remainingWeightOverride: remaining > 0 ? remaining.toFixed(3) : "0.000",
+      displayRemaining: remaining > 0 ? remaining.toFixed(3) : "0.000", // 👈 ADD
       karigarAssigned: "",
       meltingType: item.jobMetalType || "22K",
       authorizedBy: "",
@@ -341,7 +349,17 @@ export const DepartmentIssue = () => {
         return;
       }
     }
-    setFormData({ ...formData, [name]: value });
+    if (name === "goldIssued") {
+  const originalRemaining = parseFloat(formData.remainingWeightOverride) || 0;
+  const newDisplay = Math.max(0, originalRemaining - (parseFloat(value) || 0));
+  setFormData({
+    ...formData,
+    goldIssued: value,
+    displayRemaining: newDisplay.toFixed(3),
+  });
+} else {
+  setFormData({ ...formData, [name]: value });
+}
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -364,6 +382,7 @@ export const DepartmentIssue = () => {
     }
 
     setIsSubmitting(true);
+    setIsLoading(true); // Full page loader
 
     try {
       const updates: any = {};
@@ -436,7 +455,7 @@ export const DepartmentIssue = () => {
           isNumber: nextIS,
           serialNo: sheetSerial,
           orderNo: job.orderNo,
-          issuedWeight: formData.goldIssued,
+          issuedWeight: parseFloat(formData.goldIssued).toFixed(3),
           karigarName: formData.karigarAssigned,
           authorizedBy: formData.authorizedBy,
           dept: selectedDept,
@@ -455,63 +474,86 @@ export const DepartmentIssue = () => {
         setShowSuccess(true);
         setTimeout(() => setShowSuccess(false), 3000);
 
-        // 3️⃣ Background API Submission (Fire and forget - NO await blocking)
+        // 3️⃣ Await background tasks sequentially
+        try {
+          const rowData = [
+            timestamp,
+            "", // Backend auto-generates serial number IS-XXX
+            sheetSerial,
+            job.orderNo,
+            parseFloat(formData.goldIssued).toFixed(3),
+            formData.karigarAssigned,
+            formData.authorizedBy,
+            "", // Column H (7) - planned2 placeholder
+            "", // Column I (8) - actual2 placeholder
+            "", // Column J (9) - Blank as per request
+            "", "", "", "", "", // Padding columns K-O
+            selectedDept, // Column P (15) - Department (for history)
+          ];
 
-        const rowData = [
-          timestamp,
-          "", // Backend auto-generates serial number IS-XXX
-          sheetSerial,
-          job.orderNo,
-          formData.goldIssued,
-          formData.karigarAssigned,
-          formData.authorizedBy,
-          "", // Column H (7) - planned2 placeholder
-          "", // Column I (8) - actual2 placeholder
-          "", // Column J (9) - Blank as per request
-          "", "", "", "", "", // Padding columns K-O
-          selectedDept, // Column P (15) - Department (for history)
-        ];
+          const form = new FormData();
+          form.append("action", "insert");
+          form.append("sheetName", "Department Issue");
+          form.append("rowData", JSON.stringify(rowData));
 
-        const form = new FormData();
-        form.append("action", "insert");
-        form.append("sheetName", "Department Issue");
-        form.append("rowData", JSON.stringify(rowData));
+          await fetch("https://script.google.com/macros/s/AKfycbygSkpwhyYTjKeO5LRz06kTXMaM0mLMDwLNNaUR_rBItSshetknhJHGWuAJ3a2CMrX4/exec", {
+            method: "POST",
+            body: form
+          });
 
-        fetch("https://script.google.com/macros/s/AKfycbygSkpwhyYTjKeO5LRz06kTXMaM0mLMDwLNNaUR_rBItSshetknhJHGWuAJ3a2CMrX4/exec", {
-          method: "POST",
-          body: form
-        })
-          .then(() => {
-            invalidateCache("Department Issue");
-            invalidateCache("Production Planning");
+          invalidateCache("Department Issue");
+          invalidateCache("Production Planning");
 
-            // Update Column K (Planned Weight) in Production Planning sheet
-            const updatePlanningTask = async () => {
-              const res = await fetch(`https://script.google.com/macros/s/AKfycbygSkpwhyYTjKeO5LRz06kTXMaM0mLMDwLNNaUR_rBItSshetknhJHGWuAJ3a2CMrX4/exec?sheet=Production%20Planning`);
-              const result = await res.json();
-              if (!result.success) return;
-              const rows = result.data as any[][];
-              let rowIndex = -1;
-              for (let i = 6; i < rows.length; i++) {
-                if (String(rows[i][1]) === String(sheetSerial) && String(rows[i][9]) === String(selectedDept)) {
-                  rowIndex = i + 1; break;
-                }
+          const updatePlanningTask = async () => {
+            const res = await fetch(`https://script.google.com/macros/s/AKfycbygSkpwhyYTjKeO5LRz06kTXMaM0mLMDwLNNaUR_rBItSshetknhJHGWuAJ3a2CMrX4/exec?sheet=Production%20Planning`);
+            const result = await res.json();
+            if (!result.success) return;
+
+            const rows = result.data as any[][];
+            let rowIndex = -1;
+            for (let i = 6; i < rows.length; i++) {
+              if (String(rows[i][1]) === String(sheetSerial) && String(rows[i][9]) === String(selectedDept)) {
+                rowIndex = i + 1; break;
               }
-              if (rowIndex !== -1) {
+            }
+
+            if (rowIndex !== -1) {
+              const currentIssued = parseFloat(rows[rowIndex-1][15]) || 0;
+              const totalIssued = (currentIssued + issuedWeight).toFixed(3);
+              
+              const newRemainingWeight = Math.max(
+                0,
+                (parseFloat(formData.remainingWeightOverride) || 0) - issuedWeight
+              ).toFixed(3);
+
+              const updateCell = async (columnIndex: string, value: string) => {
                 const updateForm = new FormData();
                 updateForm.append("action", "updateCell");
                 updateForm.append("sheetName", "Production Planning");
                 updateForm.append("rowIndex", rowIndex.toString());
-                updateForm.append("columnIndex", "11"); // Column K is index 11
-                updateForm.append("value", formData.remainingWeightOverride);
-                await fetch("https://script.google.com/macros/s/AKfycbygSkpwhyYTjKeO5LRz06kTXMaM0mLMDwLNNaUR_rBItSshetknhJHGWuAJ3a2CMrX4/exec", { method: "POST", body: updateForm });
-              }
-            };
-            updatePlanningTask().catch(console.error);
+                updateForm.append("columnIndex", columnIndex);
+                updateForm.append("value", value);
+                await fetch(
+                  "https://script.google.com/macros/s/AKfycbygSkpwhyYTjKeO5LRz06kTXMaM0mLMDwLNNaUR_rBItSshetknhJHGWuAJ3a2CMrX4/exec",
+                  { method: "POST", body: updateForm }
+                );
+              };
 
-            setTimeout(() => fetchAllData(true), 1200);
-          })
-          .catch(console.error);
+              await updateCell("14", timestamp);
+              await updateCell("16", totalIssued);
+              await updateCell("17", newRemainingWeight);
+            }
+          };
+
+          await updatePlanningTask();
+          
+          // Wait for consistency and refresh
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          await fetchAllData(true);
+
+        } catch (submitErr) {
+          console.error("Background submission error:", submitErr);
+        }
 
       }
     } catch (error) {
@@ -519,6 +561,7 @@ export const DepartmentIssue = () => {
       alert("Error submitting issue. Please try again.");
     } finally {
       setIsSubmitting(false);
+      setIsLoading(false); // Stop full page loader
     }
   };
   const formatDate = (date: any) => {
@@ -593,7 +636,7 @@ export const DepartmentIssue = () => {
                     <TrendingUp className="w-4 h-4 text-orange-600" />
                     <h3 className="font-bold text-gray-900 text-[13px] uppercase tracking-tight">Department Wise Breakdown</h3>
                   </div>
-                  <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-[13px] font-bold rounded-lg uppercase tracking-tighter">Live Summary</span>
+                  <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-[11px] font-black rounded-lg uppercase tracking-tighter shrink-0">Live Summary</span>
                 </div>
                 <div className="overflow-x-auto flex-1 custom-scrollbar">
                   {/* Desktop Table */}
@@ -610,15 +653,15 @@ export const DepartmentIssue = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 bg-white">
-                      {stats.deptStats.map((dept) => [
+                      {mainBreakdown.total.map((dept) => [
                         <tr
-                          key={dept.name}
-                          onClick={() => setExpandedDept(expandedDept === dept.name ? null : dept.name)}
-                          className="hover:bg-amber-50/40 cursor-pointer transition-all duration-200 border-b border-gray-50 last:border-0 group"
+                          key={dept.dept}
+                          onClick={() => setExpandedDept(expandedDept === dept.dept ? null : dept.dept)}
+                          className="hover:bg-amber-50/40 transition-all duration-200 border-b border-gray-50 last:border-0 group cursor-pointer"
                         >
                           <td className="px-4 py-3.5">
                             <div className="flex items-center gap-2">
-                              <span className="font-bold text-gray-900 text-[13px] tracking-tight group-hover:text-amber-600 transition-colors">{dept.name}</span>
+                              <span className="font-bold text-gray-900 text-[13px] tracking-tight group-hover:text-amber-600 transition-colors uppercase">{dept.dept}</span>
                               <Activity className="w-3 h-3 text-gray-200" />
                             </div>
                           </td>
@@ -633,40 +676,52 @@ export const DepartmentIssue = () => {
                             </span>
                           </td>
                           <td className="px-4 py-3.5 text-center font-bold text-blue-600 text-[13px]">
-                            {dept.totalIssuePendingWeight.toFixed(3)}
+                            {dept.issuePendingWeight.toFixed(3)}
                           </td>
                           <td className="px-4 py-3.5 text-center font-bold text-orange-600 text-[13px]">
-                            {dept.totalReturnPendingWeight.toFixed(3)}
+                            {dept.returnPendingWeight.toFixed(3)}
                           </td>
                           <td className="px-4 py-3.5 text-center font-bold text-gray-900 text-[13px]">
-                            {dept.totalPlannedWeight.toFixed(3)}
+                            {(dept.issuePendingWeight + dept.returnPendingWeight).toFixed(3)}
                           </td>
                           <td className="px-4 py-3.5 text-center">
-                            <span className="px-2 py-0.5 bg-gray-50 text-gray-500 text-[13px] font-bold rounded-md border border-gray-100 uppercase tracking-widest">{dept.totalCount}</span>
+                            <span className="px-2 py-0.5 bg-gray-50 text-gray-500 text-[13px] font-bold rounded-md border border-gray-100 uppercase tracking-widest">{dept.issuePending + dept.returnPending}</span>
                           </td>
                         </tr>,
-                        expandedDept === dept.name && (
-                          <tr key={`${dept.name}-details`} className="bg-gray-50/50">
-                            <td colSpan={7} className="px-8 py-4">
-                              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 animate-in slide-in-from-top-2 duration-300">
-                                {dept.meltingTypeBreakdown.map((mt) => (
-                                  <div key={mt.type} className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm space-y-2">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-base font-black text-gray-900">{mt.type}</span>
-                                      <span className="text-[12px] font-bold text-gray-400">{mt.count} JOBS</span>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <div className="flex justify-between text-[12px] px-1.5 py-1 bg-blue-50/50 rounded">
-                                        <span className="text-blue-600 font-bold uppercase tracking-tighter">Issue Pending</span>
-                                        <span className="font-black text-blue-700">{mt.issuePendingWeight.toFixed(3)}g</span>
-                                      </div>
-                                      <div className="flex justify-between text-[12px] px-1.5 py-1 bg-orange-50/50 rounded">
-                                        <span className="text-orange-600 font-bold uppercase tracking-tighter">Return Pending</span>
-                                        <span className="font-black text-orange-700">{mt.returnPendingWeight.toFixed(3)}g</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
+                        expandedDept === dept.dept && (
+                          <tr key={`${dept.dept}-details`} className="bg-gray-50/50">
+                            <td colSpan={7} className="px-6 py-4">
+                              <div className="bg-white rounded-xl border border-orange-100 shadow-sm overflow-hidden animate-in slide-in-from-top-2 duration-300">
+                                <div className="px-4 py-2 border-b border-orange-50 bg-orange-50/20 flex justify-between items-center">
+                                  <span className="text-[11px] font-black text-orange-700 uppercase tracking-widest">Melting Type Breakdown for {dept.dept}</span>
+                                  <span className="text-[10px] font-bold text-gray-400">Sheet Data Verified</span>
+                                </div>
+                                <table className="w-full text-left">
+                                  <thead className="bg-gray-50">
+                                    <tr>
+                                      <th className="px-4 py-2 text-[10px] font-black text-gray-500 uppercase">Type</th>
+                                      <th className="px-4 py-2 text-center text-[10px] font-black text-gray-500 uppercase">Issue Pend.</th>
+                                      <th className="px-4 py-2 text-center text-[10px] font-black text-gray-500 uppercase">Ret. Pend.</th>
+                                      <th className="px-4 py-2 text-center text-[10px] font-black text-blue-600 uppercase">Wght Iss (g)</th>
+                                      <th className="px-4 py-2 text-center text-[10px] font-black text-orange-600 uppercase">Wght Ret (g)</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-gray-50">
+                                    {(["22K", "20K", "18K"] as const).map((type) => {
+                                      const typeData = mainBreakdown[type].find(d => d.dept === dept.dept);
+                                      if (!typeData) return null;
+                                      return (
+                                        <tr key={type} className="hover:bg-gray-50/50 transition-colors">
+                                          <td className="px-4 py-2 text-[12px] font-black text-gray-900">{type}</td>
+                                          <td className="px-4 py-2 text-center text-[12px] font-bold text-blue-600">{typeData.issuePending}</td>
+                                          <td className="px-4 py-2 text-center text-[12px] font-bold text-orange-600">{typeData.returnPending}</td>
+                                          <td className="px-4 py-2 text-center text-[12px] font-bold text-blue-700">{typeData.issuePendingWeight.toFixed(3)}</td>
+                                          <td className="px-4 py-2 text-center text-[12px] font-bold text-orange-700">{typeData.returnPendingWeight.toFixed(3)}</td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
                               </div>
                             </td>
                           </tr>
@@ -902,19 +957,15 @@ export const DepartmentIssue = () => {
                                 <td className="px-4 py-4 text-right">
                                   <div className="flex flex-col gap-1.5 items-end">
                                     <div className="flex flex-wrap gap-1 justify-end">
-                                      {job.departments.map((dept) => {
-                                        const isAlreadyClosed = dept.status === "Returned" || dept.status === "Completed";
-                                        if (isAlreadyClosed) return null;
-                                        return (
-                                          <button
-                                            key={dept.id}
-                                            onClick={() => handleIssueGoldDirectly({ ...dept, jobId: job.jobId, jobMetalType: job.metalType })}
-                                            className="px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-bold rounded uppercase tracking-wider shadow-sm transition-colors whitespace-nowrap"
-                                          >
-                                            Issue {dept.dept}
-                                          </button>
-                                        );
-                                      })}
+                                    {job.departments.map((dept) => (
+                                      <button
+                                        key={dept.id}
+                                        onClick={() => handleIssueGoldDirectly({ ...dept, jobId: job.jobId, jobMetalType: job.metalType })}
+                                        className="px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-bold rounded uppercase tracking-wider shadow-sm transition-colors whitespace-nowrap"
+                                      >
+                                        Issue {dept.dept}
+                                      </button>
+                                    ))}
                                     </div>
                                   </div>
                                 </td>
@@ -1179,7 +1230,7 @@ export const DepartmentIssue = () => {
                           >
                             <option value="">Select department</option>
                             {selectedJob?.departments
-                              .filter((d) => hasValue(d.masterColM) && !hasValue(d.masterColN) && (!selectedDept || d.dept === selectedDept))
+                              .filter((d) => hasValue(d.masterColM) && parseFloat(d.remainingWeight || "0") > 0 && (!selectedDept || d.dept === selectedDept))
                               .map((dept) => {
                                 const rem = Math.max(0, parseFloat(dept.remainingWeight || "0"));
                                 return (

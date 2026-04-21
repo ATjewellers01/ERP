@@ -187,6 +187,7 @@ interface AppContextType {
   setDepartmentReturns: React.Dispatch<React.SetStateAction<DepartmentReturnEntry[]>>;
   alloyStock: { "22K": number; "20K": number; "18K": number };
   liveDepartmentStock: LiveDepartmentStock;
+  mainBreakdown: MainBreakdownStats;
 }
 
 interface StockData {
@@ -250,6 +251,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     "18K": { Die: 0, Taar: 0, Chain: 0, KDM: 0 },
   });
 
+  const [mainBreakdown, setMainBreakdown] = useState<MainBreakdownStats>({
+    total: [],
+    "22K": [],
+    "20K": [],
+    "18K": [],
+  });
+
   /**
    * fetchAllData — central data loader.
    *
@@ -304,7 +312,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const masterResult = resolveSheet("Master Drop Down");
       const mainCalcResult = resolveSheet("Main Calculation");
 
-      // 0. Process Main Calculation (Live Department Stocks)
+      // 0. Process Main Calculation (Live Department Stocks & Breakdowns)
       if (mainCalcResult && mainCalcResult.success) {
         const rows = mainCalcResult.data as any[][];
         const newLiveStock: LiveDepartmentStock = {
@@ -313,8 +321,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           "18K": { Die: 0, Taar: 0, Chain: 0, KDM: 0 },
         };
 
-        // Looking for rows matching Metaltype (e.g. 22K, 20K, 18K) in Column Q (index 16)
+        const breakdown: MainBreakdownStats = {
+          total: [],
+          "22K": [],
+          "20K": [],
+          "18K": [],
+        };
+
+        let currentSection: keyof MainBreakdownStats | null = null;
+
         rows.forEach(row => {
+          // Live Stock processing (already existing logic)
           const type = String(row[16] || "").trim().toUpperCase();
           if (newLiveStock[type]) {
             newLiveStock[type].Die = parseFloat(row[17]) || 0;
@@ -322,8 +339,33 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             newLiveStock[type].Chain = parseFloat(row[19]) || 0;
             newLiveStock[type].KDM = parseFloat(row[20]) || 0;
           }
+
+          // Breakdown parsing (New logic)
+          // Column W (index 22) contains headers and department names
+          const colW = String(row[22] || "").trim();
+          
+          if (colW === "Department Wise Breakdown") {
+            currentSection = "total";
+          } else if (colW === "Department Wise Breakdown (22K)") {
+            currentSection = "22K";
+          } else if (colW === "Department Wise Breakdown (20K)") {
+            currentSection = "20K";
+          } else if (colW === "Department Wise Breakdown (18K)") {
+            currentSection = "18K";
+          } else if (currentSection && ["Die", "KDM", "Chain", "Taar"].includes(colW)) {
+            // Found a department row within a section
+            breakdown[currentSection].push({
+              dept: colW,
+              issuePending: parseInt(row[23]) || 0,
+              issuePendingWeight: parseFloat(row[24]) || 0,
+              returnPending: parseInt(row[25]) || 0,
+              returnPendingWeight: parseFloat(row[26]) || 0,
+            });
+          }
         });
+
         setLiveDepartmentStock(newLiveStock);
+        setMainBreakdown(breakdown);
       }
 
       // 2. Process Procurement Entries (24K Metal Stock)
@@ -521,7 +563,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 updatedAt: row[0] ? new Date(row[0]) : new Date(),
                 karigarName: row[4],    // col[4] = Karigar Name
                 category: row[5],       // col[5] = Category
-                remainingWeight: row[16], // col[16] = Remaining Weight (Column Q)
+                remainingWeight: (parseFloat(row[16]) > 0 || (row[13] && String(row[13]).trim() !== "")) ? row[16] : row[10], // Priority to Q if balance exists or issued, else K
                 departments: [],
                 stage: "Created",
                 _deptCount: 0,
@@ -549,7 +591,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               countNo: String(countNo),
               status: "Pending",
               returnAttempts: [],
-              remainingWeight: row[16] || "0.000", // col[16] = Remaining Weight (Column Q)
+              remainingWeight: (parseFloat(row[16]) > 0 || (row[13] && String(row[13]).trim() !== "")) ? (row[16] || "0.000") : (row[10] || "0.000"),
               expectedReturn: row[10] ? (parseFloat(row[10]) * (1 - (parseFloat(row[11]) || 2) / 100)).toFixed(3) : "0.000",
             };
 
@@ -618,10 +660,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           });
 
         const jobList = Object.values(jobGroups).map((group: any) => {
-          const hasIssued = group.departments.some((d: any) => d.status === "Issued");
+          const hasPending = group.departments.some((d: any) => parseFloat(d.remainingWeight || "0") > 0);
+          const hasHistory = group.departments.some((d: any) => parseFloat(d.remainingWeight || "0") <= 0 && d.masterColN);
           const allCompleted = group.departments.every((d: any) => d.status === "Completed");
           if (allCompleted) group.stage = "Completed";
-          else if (hasIssued) group.stage = "Issued";
+          else if (hasPending) group.stage = "Pending";
+          else if (hasHistory) group.stage = "History";
           return group;
         }).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
@@ -989,6 +1033,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setDepartmentReturns,
         alloyStock,
         liveDepartmentStock,
+        mainBreakdown,
         users,
       }}
     >
