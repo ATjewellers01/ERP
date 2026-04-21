@@ -499,10 +499,7 @@ export const JobCreation = () => {
 
           {/* Header Section */}
           <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Production Planning</h2>
-              <p className="text-base text-gray-500 font-medium">Create and track production planning</p>
-            </div>
+            
           </div>
 
           {/* Success Overlay */}

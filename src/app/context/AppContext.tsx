@@ -134,6 +134,12 @@ export interface DepartmentIssueEntry {
   dept?: string;
   planned2?: string;
   actual2?: string;
+  finishedNet?: string;
+  scrapMetal?: string;
+  dustWeight?: string;
+  metalLoss?: string;
+  returnType?: string;
+  meltingType?: string;
 }
 
 export interface LiveDepartmentStock {
@@ -277,6 +283,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       let totalStock24K_999 = 0, totalStock24K_995 = 0;
       let totalStock22K = 0, totalStock20K = 0, totalStock18K = 0;
       let used999 = 0, used995 = 0;
+      let allIssueRows: DepartmentIssueEntry[] = [];
 
       // ── 1. Batch-fetch all sheets (1 HTTP call on first load, cache hits
       //       after that — only invalidated sheets re-fetch from network) ──
@@ -404,7 +411,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const rows = issueResult.data as any[][];
 
         // 🔹 Populate departmentIssues for raw ledger (History)
-        const issues: DepartmentIssueEntry[] = rows.slice(6)
+        allIssueRows = rows.slice(6)
           .filter(row => row[1] && String(row[1]).trim() !== "")
           .map(row => ({
             timestamp: String(row[0] || ""),
@@ -418,8 +425,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             planned2: String(row[7] || ""),
             actual2: String(row[8] || ""),
             finishedNet: String(row[10] || "0"),
+            scrapMetal: String(row[11] || "0"),
+            dustWeight: String(row[12] || "0"),
+            metalLoss: String(row[13] || "0"),
+            returnType: String(row[14] || ""),
+            meltingType: String(row[16] || ""), // Column Q
           })).reverse();
-        setDepartmentIssues(issues);
+        setDepartmentIssues(allIssueRows);
 
         rows.slice(6)
           .filter(row => row[1] && String(row[1]).trim() !== "")
@@ -436,6 +448,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               planned2: row[7] || "", // Column H (7) - Mark as 'Issued' for Pending logic
               actual2: row[8] || "",   // Column I (8) - Mark as 'Returned' for History logic
               finishedNet: parseFloat(row[10]) || 0, // Column K (10) - Finished Net for Stock
+              scrapMetal: parseFloat(row[11]) || 0,
+              dustWeight: parseFloat(row[12]) || 0,
+              metalLoss: parseFloat(row[13]) || 0,
+              returnType: String(row[14] || ""),
               meltingType: String(row[16] || ""), // Column Q (16) - Melting Type
             };
           });
@@ -445,20 +461,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const allReturnAttemptsMap: Record<string, any[]> = {};
       if (returnResult.success) {
         const rows = returnResult.data as any[][];
-        const flatReturns: DepartmentReturnEntry[] = rows.slice(1)
-          .filter(row => row[2] && String(row[2]).trim() !== "")
-          .map(row => ({
-            timestamp: String(row[0] || ""),
-            returnNo: String(row[1] || ""),
-            isNumber: String(row[2] || ""),
-            serialNo: String(row[3] || ""),
-            orderNo: String(row[4] || ""),
-            finishedNet: String(row[5] || ""),
-            scrapMetal: String(row[6] || ""),
-            dustWeight: String(row[7] || ""),
-            metalLoss: String(row[8] || ""),
-            returnType: String(row[9] || ""),
-          })).reverse();
+        // 🔹 Populate departmentReturns from Department Issue sheet (Unified History)
+        const flatReturns: DepartmentReturnEntry[] = allIssueRows
+          .filter(issue => issue.actual2 || (parseFloat(issue.finishedNet || "0") > 0))
+          .map(issue => ({
+            timestamp: issue.actual2 || issue.timestamp,
+            returnNo: `RN-${issue.isNumber}`, // Synthetic return number using IS-NO
+            isNumber: issue.isNumber,
+            serialNo: issue.serialNo,
+            orderNo: issue.orderNo,
+            finishedNet: issue.finishedNet || "0",
+            scrapMetal: issue.scrapMetal || "0",
+            dustWeight: issue.dustWeight || "0",
+            metalLoss: issue.metalLoss || "0",
+            returnType: issue.returnType || "CompleteReturn"
+          }));
         setDepartmentReturns(flatReturns);
 
         rows
@@ -516,22 +533,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
             const issuedWeight = parseFloat(row[15]) || 0; // col[15] = Issue Weight (was 16)
 
-            // Link Return Attempts and calculate recovery/shortage
-            const matchingAttempts = allReturnAttemptsMap[`${serialNo}-${countNo}`] || [];
-            const processedAttempts = matchingAttempts.map(att => {
-              const finished = parseFloat(att.finishedPartsWeight) || 0;
-              const scrap = parseFloat(att.scrapWeight) || 0;
-              const dust = parseFloat(att.dustWeight) || 0;
-              const loss = parseFloat(att.metalLoss) || 0;
-              const entryTotal = finished + scrap + dust + loss;
-              const divisor = issuedWeight || 1;
-              return {
-                ...att,
-                recovery: parseFloat(((entryTotal / divisor) * 100).toFixed(2)),
-                shortage: parseFloat((divisor - entryTotal).toFixed(2))
-              };
-            });
-
             const deptAlloc: JobDepartment = {
               id: `${serialNo}-${countNo}`,
               dept: row[9] || "",            // col[9] = Dept (Column J)
@@ -547,7 +548,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               returnType: row[5],      // col[5] = Category/Return Type
               countNo: String(countNo),
               status: "Pending",
-              returnAttempts: processedAttempts,
+              returnAttempts: [],
               remainingWeight: row[16] || "0.000", // col[16] = Remaining Weight (Column Q)
               expectedReturn: row[10] ? (parseFloat(row[10]) * (1 - (parseFloat(row[11]) || 2) / 100)).toFixed(3) : "0.000",
             };
@@ -561,8 +562,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               deptAlloc.issuedWeight = issueData.issuedWeight;
 
               // Link Return Attempts using IS-NO
-              const matchingAttempts = allReturnAttemptsMap[isNo] || [];
-              deptAlloc.returnAttempts = matchingAttempts.map(att => {
+              const matchingAttemptsFromReturnSheet = allReturnAttemptsMap[isNo] || [];
+              
+              // If we have return data on the issue record itself (New Logic), add it as an attempt
+              const hasDirectReturnData = parseFloat(issueData.finishedNet || "0") > 0 || parseFloat(issueData.scrapMetal || "0") > 0;
+              const directAttempt = hasDirectReturnData ? [{
+                finishedPartsWeight: String(issueData.finishedNet || "0"),
+                scrapWeight: String(issueData.scrapMetal || "0"),
+                dustWeight: String(issueData.dustWeight || "0"),
+                metalLoss: String(issueData.metalLoss || "0"),
+                returnType: issueData.returnType || "",
+                timestamp: issueData.actual2 || issueData.timestamp,
+              }] : [];
+
+              const allAttempts = [...matchingAttemptsFromReturnSheet, ...directAttempt];
+
+              deptAlloc.returnAttempts = allAttempts.map(att => {
                 const finished = parseFloat(att.finishedPartsWeight) || 0;
                 const scrap = parseFloat(att.scrapWeight) || 0;
                 const dust = parseFloat(att.dustWeight) || 0;
@@ -577,14 +592,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               });
 
               // Calculate cumulative returned weight for Stock Summary
-              deptAlloc.returnedWeight = (issueData.finishedNet || 0) + (deptAlloc.returnAttempts.reduce((sum, att) => {
-                return sum + (parseFloat(att.scrapWeight) || 0)
-                  + (parseFloat(att.dustWeight) || 0)
-                  + (parseFloat(att.metalLoss) || 0);
-              }, 0));
+              // Sum up finished weight and all other components from attempts
+              deptAlloc.returnedWeight = (parseFloat(issueData.finishedNet) || 0) + 
+                                       (parseFloat(issueData.scrapMetal) || 0) + 
+                                       (parseFloat(issueData.dustWeight) || 0) + 
+                                       (parseFloat(issueData.metalLoss) || 0);
 
-              deptAlloc.finishedWeight = issueData.finishedNet || 0;
-              deptAlloc.scrapWeight = deptAlloc.returnAttempts.reduce((sum, att) => sum + (parseFloat(att.scrapWeight) || 0), 0);
+              deptAlloc.finishedWeight = parseFloat(issueData.finishedNet) || 0;
+              deptAlloc.scrapWeight = parseFloat(issueData.scrapMetal) || 0;
 
               deptAlloc.karigarAssigned = issueData.karigarName;
               deptAlloc.authorizedBy = issueData.authorizedBy;

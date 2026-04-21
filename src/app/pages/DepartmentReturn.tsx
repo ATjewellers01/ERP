@@ -27,6 +27,7 @@ export const DepartmentReturn = () => {
   } = useApp();
 
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const hasRefreshed = useRef(false);
   useEffect(() => {
     if (!hasRefreshed.current) {
@@ -227,58 +228,15 @@ export const DepartmentReturn = () => {
           }
         }
         updateStock(stockUpdates);
-
-        // 1.05 Optimistic Department Issue Status Update
-        setDepartmentIssues((prev: DepartmentIssueEntry[]) =>
-          prev.map(issue => issue.isNumber === selectedIssue.isNumber ? { ...issue, actual2: timestamp } : issue)
-        );
       }
+
+      // 1.05 Optimistic Department Issue Status Update
+      setDepartmentIssues((prev: DepartmentIssueEntry[]) =>
+        prev.map(issue => issue.isNumber === selectedIssue.isNumber ? { ...issue, actual2: timestamp, scrapMetal: formData.scrapWeight } : issue)
+      );
 
       // 1.1 Status update is now handled by the background fetch (preventing flicker)
 
-
-      // Calculate next predicted Return Number (RN-XXX)
-      const numericParts = departmentReturns
-        .map(r => {
-          const match = r.returnNo?.match(/RN-(\d+)/);
-          return match ? parseInt(match[1], 10) : 0;
-        })
-        .filter(n => !isNaN(n));
-      const maxNum = numericParts.length > 0 ? Math.max(...numericParts) : 0;
-      const nextRN = `RN-${String(maxNum + 1).padStart(3, '0')}`;
-
-      // 1.2 Add to departmentReturns locally
-      const newReturnEntry: DepartmentReturnEntry = {
-        timestamp,
-        returnNo: nextRN,
-        isNumber: selectedIssue.isNumber,
-        serialNo: selectedIssue.serialNo,
-        orderNo: selectedIssue.orderNo,
-        finishedNet: formData.finishedPartsWeight || "0",
-        scrapMetal: formData.scrapWeight || "0",
-        dustWeight: formData.dustWeight || "0",
-        metalLoss: formData.metalLoss || "0",
-        returnType: returnCloseStatus
-      };
-      // 1.3 Update the global job state to show completion instantly
-      const job = jobs.find(j => j.jobId === `JOB-${selectedIssue.serialNo}`);
-      if (job) {
-        const updatedDepts = job.departments.map(d => {
-          if (d.dept === selectedIssue.dept && d.status === "Issued") {
-            return { ...d, status: (isComplete ? "Completed" : "Issued") as "Completed" | "Issued" };
-          }
-          return d;
-        });
-        updateJob(job.jobId, {
-          departments: updatedDepts,
-          stage: isComplete ? "Completed" : "Issued",
-          // Note: We don't need to rebuild the whole department array here 
-          // because the Pending/History tabs in this view already refresh 
-          // using the departmentIssues state we updated above.
-        });
-      }
-
-      setDepartmentReturns((prev: DepartmentReturnEntry[]) => [newReturnEntry, ...prev]);
 
       // 2️⃣ Instant UI Feedback - Close modal & update state immediately
       setShowReturnModal(false);
@@ -292,65 +250,91 @@ export const DepartmentReturn = () => {
       // 3️⃣ Background API Submission (Fire and forget)
       const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygSkpwhyYTjKeO5LRz06kTXMaM0mLMDwLNNaUR_rBItSshetknhJHGWuAJ3a2CMrX4/exec";
 
-      const insertRowData = [
-        timestamp,
-        "", // Backend auto-generates serial number RN-XXX
-        selectedIssue.isNumber,
-        selectedIssue.serialNo,
-        selectedIssue.orderNo,
-        formData.finishedPartsWeight || "",
-        formData.scrapWeight || "",
-        formData.dustWeight || "",
-        formData.metalLoss || "",
-        returnCloseStatus
-      ];
-
-      const insertForm = new FormData();
-      insertForm.append("action", "insert");
-      insertForm.append("sheetName", "Department Issue Return");
-      insertForm.append("rowData", JSON.stringify(insertRowData));
-
-      // Promises for parallel background execution
-      const backgroundTasks: Promise<any>[] = [
-        fetch(SCRIPT_URL, { method: "POST", body: insertForm })
-      ];
-
-      if (isComplete) {
-        // Need to find the exact rowIndex to update the master issue record
-        const updateTask = async () => {
+      const submitBackgroundTasks = async () => {
+        try {
           const sheetRes = await fetch(`${SCRIPT_URL}?sheet=Department%20Issue`);
           const sheetResult = await sheetRes.json();
           if (!sheetResult.success) throw new Error("Sheet fetch failed");
 
           const rows = sheetResult.data as any[][];
-          let rowIndex = -1;
+          
+          // TASK 1: Update original record
+          let originalRowIndex = -1;
           for (let i = 0; i < rows.length; i++) {
             if (String(rows[i][1]) === String(selectedIssue.isNumber)) {
-              rowIndex = i + 1;
+              originalRowIndex = i + 1;
               break;
             }
           }
 
-          if (rowIndex !== -1) {
-            const updates = { 8: timestamp }; // Column I
-            const updateIssueForm = new FormData();
-            updateIssueForm.append("action", "batchUpdate");
-            updateIssueForm.append("sheetName", "Department Issue");
-            updateIssueForm.append("rowIndex", rowIndex.toString());
-            updateIssueForm.append("updates", JSON.stringify(updates));
-            await fetch(SCRIPT_URL, { method: "POST", body: updateIssueForm });
-          }
-        };
-        backgroundTasks.push(updateTask());
-      }
+          if (originalRowIndex !== -1) {
+            const rowDataArray = Array(15).fill("");
+            rowDataArray[10] = formData.finishedPartsWeight || "0"; 
+            rowDataArray[11] = formData.scrapWeight || "0";        
+            rowDataArray[12] = formData.dustWeight || "0";         
+            rowDataArray[13] = formData.metalLoss || "0";          
+            rowDataArray[14] = returnCloseStatus;                  
+            rowDataArray[8] = timestamp; 
 
-      Promise.all(backgroundTasks)
+            const updateForm = new URLSearchParams();
+            updateForm.append("action", "update");
+            updateForm.append("sheetName", "Department Issue");
+            updateForm.append("rowIndex", originalRowIndex.toString());
+            updateForm.append("rowData", JSON.stringify(rowDataArray));
+
+            await fetch(SCRIPT_URL, { 
+              method: "POST", 
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: updateForm.toString() 
+            });
+          }
+
+          // TASK 2: Insert new record (IF Partly Return)
+          // We use 'update' with rowIndex = rows.length + 1 to bypass backend auto-serial generation
+          if (!isComplete) {
+            const newRowData = Array(17).fill("");
+            newRowData[0] = timestamp;
+            newRowData[1] = selectedIssue.isNumber || ""; // PRESERVE IS-NO
+            newRowData[2] = selectedIssue.serialNo;
+            newRowData[3] = selectedIssue.orderNo;
+            newRowData[4] = formData.scrapWeight || "0";
+            newRowData[5] = selectedIssue.karigarName;
+            newRowData[6] = selectedIssue.authorizedBy;
+            newRowData[7] = ""; // Column H Blank
+            newRowData[15] = selectedIssue.dept || "";
+            newRowData[16] = ""; // Column Q Blank
+
+            const insertForm = new URLSearchParams();
+            insertForm.append("action", "update"); // USE UPDATE TO BYPASS SERIAL LOGIC
+            insertForm.append("sheetName", "Department Issue");
+            insertForm.append("rowIndex", (rows.length + 1).toString());
+            insertForm.append("rowData", JSON.stringify(newRowData));
+
+            await fetch(SCRIPT_URL, { 
+              method: "POST", 
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: insertForm.toString() 
+            });
+          }
+        } catch (err) {
+          console.error("Background sync failed:", err);
+        }
+      };
+
+      // Start syncing loader for background tasks
+      setIsSyncing(true);
+      submitBackgroundTasks()
         .then(() => {
           invalidateCache("Department Issue");
-          invalidateCache("Department Issue Return");
-          setTimeout(() => fetchAllData(true), 1200);
+          setTimeout(async () => {
+            await fetchAllData(true);
+            setIsSyncing(false);
+          }, 1200);
         })
-        .catch(console.error);
+        .catch((err) => {
+          console.error("Critical background failure:", err);
+          setIsSyncing(false);
+        });
 
     } catch (error) {
       console.error("Failed to submit return optimistically.", error);
@@ -361,16 +345,7 @@ export const DepartmentReturn = () => {
 
   return (
     <div className="flex flex-col gap-4 h-[calc(100vh-57px-28px-2rem)] md:h-[calc(100vh-57px-28px-3rem)] relative animate-in fade-in duration-500">
-      {isLoading ? (
-        <div className="flex-1 flex items-center justify-center min-h-[60vh]">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
-            <p className="text-sm font-semibold text-gray-600">Loading fresh data...</p>
-          </div>
-        </div>
-      ) : (
-        <>
-          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/50 rounded-full blur-3xl -z-10 opacity-60" />
+      <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/50 rounded-full blur-3xl -z-10 opacity-60" />
 
           {showSuccess && (() => {
             const isLowRecovery = (lastSubmission?.recovery ?? 100) < 100;
@@ -514,7 +489,19 @@ export const DepartmentReturn = () => {
             </div>
           )}
 
-          <div className="flex-1 overflow-hidden flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 transition-all">
+          <div className="flex-1 overflow-hidden flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 transition-all relative">
+            {/* Professional Table Loader (Initial Load & Syncing) */}
+            {(isLoading || isSyncing) && (
+              <div className="absolute inset-0 z-[60] flex items-center justify-center bg-white/70 backdrop-blur-[2px] animate-in fade-in duration-300">
+                <div className="flex items-center gap-4 px-8 py-5 bg-white rounded-2xl shadow-xl border border-gray-100 min-w-[200px]">
+                  <div className="w-6 h-6 border-3 border-orange-200 border-t-orange-600 rounded-full animate-spin"></div>
+                  <div className="flex flex-col">
+                    <p className="text-sm font-bold text-gray-900 uppercase tracking-wide">{isSyncing ? "Syncing..." : "Loading..."}</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mt-0.5">Please wait</p>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="px-4 py-2 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div className="flex items-center gap-2 flex-1">
                 <div className="flex items-center gap-1.5 bg-orange-50 px-2.5 py-1.5 rounded-lg border border-orange-100">
@@ -641,7 +628,7 @@ export const DepartmentReturn = () => {
                           <p className="text-[13px] font-black text-orange-600 mt-0.5">{issue.issuedWeight}g</p>
                         </div>
                       </div>
-                      
+
                       {/* Serial No + Date */}
                       <div className="grid grid-cols-2 gap-2 mb-3">
                         <div>
@@ -653,7 +640,7 @@ export const DepartmentReturn = () => {
                           <p className="text-[11px] font-bold text-gray-500 mt-0.5">{formatDate(issue.timestamp)}</p>
                         </div>
                       </div>
-                      
+
                       {/* Karigar + Action Button */}
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex-1 bg-gray-50 px-3 py-2 rounded-lg">
@@ -701,10 +688,8 @@ export const DepartmentReturn = () => {
               </div>
             </div>
           </div>
-        </>
-      )}
-    </div>
-  );
+      </div>
+    );
 };
 
 export default DepartmentReturn;

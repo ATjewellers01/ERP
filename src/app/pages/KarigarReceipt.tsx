@@ -104,32 +104,37 @@ export const KarigarReceipt = () => {
   return (
     <div className="flex flex-col h-full bg-gray-50/50">
       {/* Header Section */}
-      <div className="bg-white border-b border-gray-200 px-4 md:px-6 py-4 md:py-5">
-        <div className="flex items-start md:items-center justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <span className="w-8 h-8 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-lg flex items-center justify-center">
-                <span className="text-white text-sm font-bold">KR</span>
-              </span>
-              Karigar Receipt
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Track received items from Karigar Issue
-            </p>
-          </div>
-          <button
-            onClick={() => fetchData(true)}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-lg transition-colors font-medium text-sm shadow-sm"
-          >
-            <RefreshCw
-              className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
-            />
-            Refresh
-          </button>
-        </div>
-
+     <div className="bg-white border-b border-gray-200 px-4 md:px-6 py-3">
+  <div className="flex items-center justify-between">
+    
+    {/* Left Section */}
+    <div className="flex items-center gap-3">
+      <div className="w-7 h-7 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-md flex items-center justify-center">
+        <span className="text-white text-xs font-bold">KR</span>
       </div>
+
+      <div>
+        <h1 className="text-lg font-semibold text-gray-900">
+          Karigar Receipt
+        </h1>
+        <p className="text-xs text-gray-500">
+          Track received items
+        </p>
+      </div>
+    </div>
+
+    {/* Right Section */}
+    <button
+      onClick={() => fetchData(true)}
+      disabled={loading}
+      className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-md text-xs font-medium shadow-sm"
+    >
+      <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+      Refresh
+    </button>
+
+  </div>
+</div>
 
       {/* Table Section */}
       <div className="flex-1 overflow-hidden flex flex-col p-4 md:p-6">
