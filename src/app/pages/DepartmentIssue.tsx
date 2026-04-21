@@ -629,182 +629,154 @@ const availableJobs = useMemo(() => {
                 ))}
               </div>
 
-              {/* Right Side Table Section */}
-              <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
-                <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between shrink-0">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-orange-600" />
-                    <h3 className="font-bold text-gray-900 text-[13px] uppercase tracking-tight">Department Wise Breakdown</h3>
+             {/* Right Side Table Section */}
+<div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+  <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between shrink-0">
+    <div className="flex items-center gap-2">
+      <TrendingUp className="w-4 h-4 text-orange-600" />
+      <h3 className="font-bold text-gray-900 text-[13px] uppercase tracking-tight">
+        Department Wise Breakdown
+      </h3>
+    </div>
+    <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-[11px] font-black rounded-lg uppercase tracking-tighter shrink-0">
+      Live Summary
+    </span>
+  </div>
+
+  <div className="overflow-x-auto flex-1 custom-scrollbar">
+    {/* Desktop Table */}
+    <table className="hidden md:table w-full text-sm table-fixed border-collapse">
+      <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
+        <tr>
+          <th className="px-4 py-3 text-left font-bold text-gray-500 text-[12px] uppercase tracking-wider">
+            Department
+          </th>
+          <th className="px-4 py-3 text-center font-bold text-gray-500 text-[12px] uppercase tracking-wider">
+            Issue Pend.
+          </th>
+          <th className="px-4 py-3 text-center font-bold text-gray-500 text-[12px] uppercase tracking-wider">
+            Ret. Pend.
+          </th>
+          <th className="px-4 py-3 text-center font-bold text-blue-600/70 text-[12px] uppercase tracking-wider">
+            Wght Iss (g)
+          </th>
+          <th className="px-4 py-3 text-center font-bold text-orange-600/70 text-[12px] uppercase tracking-wider">
+            Wght Ret (g)
+          </th>
+        </tr>
+      </thead>
+
+      <tbody className="divide-y divide-gray-100 bg-white">
+        {mainBreakdown.total.map((dept) => [
+          <tr
+            key={dept.dept}
+            onClick={() =>
+              setExpandedDept(expandedDept === dept.dept ? null : dept.dept)
+            }
+            className="hover:bg-amber-50/40 transition-all duration-200 border-b border-gray-50 last:border-0 group cursor-pointer"
+          >
+            <td className="px-4 py-3.5">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-gray-900 text-[13px] tracking-tight group-hover:text-amber-600 transition-colors uppercase">
+                  {dept.dept}
+                </span>
+                <Activity className="w-3 h-3 text-gray-200" />
+              </div>
+            </td>
+
+            <td className="px-4 py-3.5 text-center">
+              <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 rounded-md bg-blue-50 text-blue-600 font-bold text-[12px] border border-blue-100 shadow-xs">
+                {dept.issuePending}
+              </span>
+            </td>
+
+            <td className="px-4 py-3.5 text-center">
+              <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 rounded-md bg-orange-50 text-orange-600 font-bold text-[12px] border border-orange-100 shadow-xs">
+                {dept.returnPending}
+              </span>
+            </td>
+
+            <td className="px-4 py-3.5 text-center font-bold text-blue-600 text-[13px]">
+              {dept.issuePendingWeight.toFixed(3)}
+            </td>
+
+            <td className="px-4 py-3.5 text-center font-bold text-orange-600 text-[13px]">
+              {dept.returnPendingWeight.toFixed(3)}
+            </td>
+          </tr>,
+
+          expandedDept === dept.dept && (
+            <tr key={`${dept.dept}-details`} className="bg-gray-50/50">
+              <td colSpan={5} className="px-6 py-4">
+                <div className="bg-white rounded-xl border border-orange-100 shadow-sm overflow-hidden animate-in slide-in-from-top-2 duration-300">
+                  <div className="px-4 py-2 border-b border-orange-50 bg-orange-50/20 flex justify-between items-center">
+                    <span className="text-[11px] font-black text-orange-700 uppercase tracking-widest">
+                      Melting Type Breakdown for {dept.dept}
+                    </span>
+                    <span className="text-[10px] font-bold text-gray-400">
+                      Sheet Data Verified
+                    </span>
                   </div>
-                  <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-[11px] font-black rounded-lg uppercase tracking-tighter shrink-0">Live Summary</span>
-                </div>
-                <div className="overflow-x-auto flex-1 custom-scrollbar">
-                  {/* Desktop Table */}
-                  <table className="hidden md:table w-full text-sm table-fixed border-collapse">
-                    <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
+
+                  <table className="w-full text-left">
+                    <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-4 py-3 text-left font-bold text-gray-500 text-[12px] uppercase tracking-wider">Department</th>
-                        <th className="px-4 py-3 text-center font-bold text-gray-500 text-[12px] uppercase tracking-wider">Issue Pend.</th>
-                        <th className="px-4 py-3 text-center font-bold text-gray-500 text-[12px] uppercase tracking-wider">Ret. Pend.</th>
-                        <th className="px-4 py-3 text-center font-bold text-blue-600/70 text-[12px] uppercase tracking-wider">Wght Iss (g)</th>
-                        <th className="px-4 py-3 text-center font-bold text-orange-600/70 text-[12px] uppercase tracking-wider">Wght Ret (g)</th>
-                        <th className="px-4 py-3 text-center font-bold text-gray-500 text-[12px] uppercase tracking-wider">Planned</th>
-                        <th className="px-4 py-3 text-center font-bold text-gray-500 text-[12px] uppercase tracking-wider">Count</th>
+                        <th className="px-4 py-2 text-[10px] font-black text-gray-500 uppercase">
+                          Type
+                        </th>
+                        <th className="px-4 py-2 text-center text-[10px] font-black text-gray-500 uppercase">
+                          Issue Pend.
+                        </th>
+                        <th className="px-4 py-2 text-center text-[10px] font-black text-gray-500 uppercase">
+                          Ret. Pend.
+                        </th>
+                        <th className="px-4 py-2 text-center text-[10px] font-black text-blue-600 uppercase">
+                          Wght Iss (g)
+                        </th>
+                        <th className="px-4 py-2 text-center text-[10px] font-black text-orange-600 uppercase">
+                          Wght Ret (g)
+                        </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 bg-white">
-                      {mainBreakdown.total.map((dept) => [
-                        <tr
-                          key={dept.dept}
-                          onClick={() => setExpandedDept(expandedDept === dept.dept ? null : dept.dept)}
-                          className="hover:bg-amber-50/40 transition-all duration-200 border-b border-gray-50 last:border-0 group cursor-pointer"
-                        >
-                          <td className="px-4 py-3.5">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-gray-900 text-[13px] tracking-tight group-hover:text-amber-600 transition-colors uppercase">{dept.dept}</span>
-                              <Activity className="w-3 h-3 text-gray-200" />
-                            </div>
-                          </td>
-                          <td className="px-4 py-3.5 text-center">
-                            <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 rounded-md bg-blue-50 text-blue-600 font-bold text-[12px] border border-blue-100 shadow-xs">
-                              {dept.issuePending}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3.5 text-center">
-                            <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 rounded-md bg-orange-50 text-orange-600 font-bold text-[12px] border border-orange-100 shadow-xs">
-                              {dept.returnPending}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3.5 text-center font-bold text-blue-600 text-[13px]">
-                            {dept.issuePendingWeight.toFixed(3)}
-                          </td>
-                          <td className="px-4 py-3.5 text-center font-bold text-orange-600 text-[13px]">
-                            {dept.returnPendingWeight.toFixed(3)}
-                          </td>
-                          <td className="px-4 py-3.5 text-center font-bold text-gray-900 text-[13px]">
-                            {(dept.issuePendingWeight + dept.returnPendingWeight).toFixed(3)}
-                          </td>
-                          <td className="px-4 py-3.5 text-center">
-                            <span className="px-2 py-0.5 bg-gray-50 text-gray-500 text-[13px] font-bold rounded-md border border-gray-100 uppercase tracking-widest">{dept.issuePending + dept.returnPending}</span>
-                          </td>
-                        </tr>,
-                        expandedDept === dept.dept && (
-                          <tr key={`${dept.dept}-details`} className="bg-gray-50/50">
-                            <td colSpan={7} className="px-6 py-4">
-                              <div className="bg-white rounded-xl border border-orange-100 shadow-sm overflow-hidden animate-in slide-in-from-top-2 duration-300">
-                                <div className="px-4 py-2 border-b border-orange-50 bg-orange-50/20 flex justify-between items-center">
-                                  <span className="text-[11px] font-black text-orange-700 uppercase tracking-widest">Melting Type Breakdown for {dept.dept}</span>
-                                  <span className="text-[10px] font-bold text-gray-400">Sheet Data Verified</span>
-                                </div>
-                                <table className="w-full text-left">
-                                  <thead className="bg-gray-50">
-                                    <tr>
-                                      <th className="px-4 py-2 text-[10px] font-black text-gray-500 uppercase">Type</th>
-                                      <th className="px-4 py-2 text-center text-[10px] font-black text-gray-500 uppercase">Issue Pend.</th>
-                                      <th className="px-4 py-2 text-center text-[10px] font-black text-gray-500 uppercase">Ret. Pend.</th>
-                                      <th className="px-4 py-2 text-center text-[10px] font-black text-blue-600 uppercase">Wght Iss (g)</th>
-                                      <th className="px-4 py-2 text-center text-[10px] font-black text-orange-600 uppercase">Wght Ret (g)</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody className="divide-y divide-gray-50">
-                                    {(["22K", "20K", "18K"] as const).map((type) => {
-                                      const typeData = mainBreakdown[type].find(d => d.dept === dept.dept);
-                                      if (!typeData) return null;
-                                      return (
-                                        <tr key={type} className="hover:bg-gray-50/50 transition-colors">
-                                          <td className="px-4 py-2 text-[12px] font-black text-gray-900">{type}</td>
-                                          <td className="px-4 py-2 text-center text-[12px] font-bold text-blue-600">{typeData.issuePending}</td>
-                                          <td className="px-4 py-2 text-center text-[12px] font-bold text-orange-600">{typeData.returnPending}</td>
-                                          <td className="px-4 py-2 text-center text-[12px] font-bold text-blue-700">{typeData.issuePendingWeight.toFixed(3)}</td>
-                                          <td className="px-4 py-2 text-center text-[12px] font-bold text-orange-700">{typeData.returnPendingWeight.toFixed(3)}</td>
-                                        </tr>
-                                      );
-                                    })}
-                                  </tbody>
-                                </table>
-                              </div>
+
+                    <tbody className="divide-y divide-gray-50">
+                      {(["22K", "20K", "18K"] as const).map((type) => {
+                        const typeData = mainBreakdown[type].find(
+                          (d) => d.dept === dept.dept
+                        );
+                        if (!typeData) return null;
+
+                        return (
+                          <tr key={type}>
+                            <td className="px-4 py-2 text-[12px] font-black text-gray-900">
+                              {type}
+                            </td>
+                            <td className="px-4 py-2 text-center text-[12px] font-bold text-blue-600">
+                              {typeData.issuePending}
+                            </td>
+                            <td className="px-4 py-2 text-center text-[12px] font-bold text-orange-600">
+                              {typeData.returnPending}
+                            </td>
+                            <td className="px-4 py-2 text-center text-[12px] font-bold text-blue-700">
+                              {typeData.issuePendingWeight.toFixed(3)}
+                            </td>
+                            <td className="px-4 py-2 text-center text-[12px] font-bold text-orange-700">
+                              {typeData.returnPendingWeight.toFixed(3)}
                             </td>
                           </tr>
-                        )
-                      ])}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
-
-                {/* Mobile Card View */}
-                <div className="md:hidden p-4 space-y-3">
-                  {stats.deptStats.map((dept) => (
-                    <div key={dept.name} className="bg-white rounded-xl p-4 border-2 border-orange-200 shadow-sm space-y-3">
-                      {/* Department Header */}
-                      <div className="flex justify-between items-center">
-                        <h4 className="text-[14px] font-black text-gray-900 uppercase tracking-tight">{dept.name}</h4>
-                        <span className="px-2 py-0.5 bg-gray-50 text-gray-500 text-[11px] font-bold rounded-md border border-gray-100 uppercase">
-                          {dept.totalCount} JOBS
-                        </span>
-                      </div>
-
-                      {/* Stats Grid */}
-                      <div className="grid grid-cols-3 gap-3 pt-3 border-t border-gray-100">
-                        <div>
-                          <p className="text-[10px] uppercase text-blue-600 font-bold">Issue Pend.</p>
-                          <p className="text-[13px] font-black text-blue-700">{dept.issuePending}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] uppercase text-orange-600 font-bold">Ret. Pend.</p>
-                          <p className="text-[13px] font-black text-orange-700">{dept.returnPending}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] uppercase text-gray-500 font-bold">Count</p>
-                          <p className="text-[13px] font-black text-gray-700">{dept.totalCount}</p>
-                        </div>
-                      </div>
-
-                      {/* Weight Details */}
-                      <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
-                        <div>
-                          <p className="text-[10px] uppercase text-blue-600/70 font-bold">Wght Iss (g)</p>
-                          <p className="text-[13px] font-bold text-blue-700">{dept.totalIssuePendingWeight.toFixed(3)}g</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] uppercase text-orange-600/70 font-bold">Wght Ret (g)</p>
-                          <p className="text-[13px] font-bold text-orange-700">{dept.totalReturnPendingWeight.toFixed(3)}g</p>
-                        </div>
-                        <div className="col-span-2">
-                          <p className="text-[10px] uppercase text-gray-500 font-bold">Planned (g)</p>
-                          <p className="text-[13px] font-bold text-gray-700">{dept.totalPlannedWeight.toFixed(3)}g</p>
-                        </div>
-                      </div>
-
-                      {/* Melting Type Breakdown */}
-                      {dept.meltingTypeBreakdown.length > 0 && (
-                        <div className="pt-3 border-t border-gray-100">
-                          <p className="text-[10px] uppercase text-gray-400 font-bold mb-2">Metal Types ({dept.meltingTypeBreakdown.length})</p>
-                          <div className="space-y-2">
-                            {dept.meltingTypeBreakdown.map((mt) => (
-                              <div key={mt.type} className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                <div className="flex justify-between items-center mb-2">
-                                  <span className="text-[12px] font-black text-gray-900">{mt.type}</span>
-                                  <span className="text-[11px] font-bold text-gray-400">{mt.count} jobs</span>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                  <div className="bg-blue-50/50 rounded px-2 py-1">
-                                    <p className="text-[10px] text-blue-600 font-bold uppercase">Issue Pending</p>
-                                    <p className="text-[12px] font-black text-blue-700">{mt.issuePendingWeight.toFixed(3)}g</p>
-                                  </div>
-                                  <div className="bg-orange-50/50 rounded px-2 py-1">
-                                    <p className="text-[10px] text-orange-600 font-bold uppercase">Return Pending</p>
-                                    <p className="text-[12px] font-black text-orange-700">{mt.returnPendingWeight.toFixed(3)}g</p>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
+              </td>
+            </tr>
+          ),
+        ])}
+      </tbody>
+    </table>
+  </div>
+</div>
             </div>
 
             {/* 2. History Section - Mobile Friendly */}
