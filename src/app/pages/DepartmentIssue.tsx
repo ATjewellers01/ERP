@@ -382,7 +382,7 @@ const availableJobs = useMemo(() => {
     }
 
     setIsSubmitting(true);
-    setIsLoading(true); // Full page loader
+    setIsLoading(true);
 
     try {
       const updates: any = {};
@@ -420,13 +420,13 @@ const availableJobs = useMemo(() => {
         const maxNum = numericParts.length > 0 ? Math.max(...numericParts) : 0;
         const nextIS = `IS-${String(maxNum + 1).padStart(3, '0')}`;
 
-        // 1️⃣ Optimistic Local Update (Instant UI)
+        // 1️⃣ Optimistic Local Update
         const updatedDepartments = job.departments.map((d) => {
           if (d.id === selectedJobDeptId) {
             const currentRemaining = parseFloat(formData.remainingWeightOverride || "0");
             const currentIssued = d.issuedWeight || 0;
             const newRemaining = Math.max(0, currentRemaining - issuedWeight);
-            const isFullyIssued = newRemaining <= 0.001; // Logic: condition to match pending
+            const isFullyIssued = newRemaining <= 0.001;
 
             return {
               ...d,
@@ -437,7 +437,7 @@ const availableJobs = useMemo(() => {
               meltingType: formData.meltingType,
               authorizedBy: formData.authorizedBy,
               colM: timestamp,
-              masterColN: isFullyIssued ? timestamp : d.masterColN, // Only move to history if fully issued
+              masterColN: isFullyIssued ? timestamp : d.masterColN,
             };
           }
           return d;
@@ -449,7 +449,6 @@ const availableJobs = useMemo(() => {
           issuedVia: "department"
         });
 
-        // 1.1 Update Ledger locally
         const newIssueEntry = {
           timestamp,
           isNumber: nextIS,
@@ -463,32 +462,18 @@ const availableJobs = useMemo(() => {
         };
         setDepartmentIssues((prev: any) => [newIssueEntry, ...prev]);
 
-        // 2️⃣ Instant UI Feedback - Close modal & reset form immediately
-        setShowModal(false);
-        setSelectedJobId("");
-        setSelectedJobDeptId("");
-        setSelectedDept("");
-        setFormData({
-          goldIssued: "", karigarAssigned: "", meltingType: "22K", authorizedBy: "", remainingWeightOverride: "",
-        });
-        setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 3000);
-
-        // 3️⃣ Await background tasks sequentially
+        // 2️⃣ Sync with Server (Critical)
         try {
           const rowData = [
             timestamp,
-            "", // Backend auto-generates serial number IS-XXX
+            "",
             sheetSerial,
             job.orderNo,
-            parseFloat(formData.goldIssued).toFixed(3),
+            parseFloat(issuedWeight.toString()).toFixed(3),
             formData.karigarAssigned,
             formData.authorizedBy,
-            "", // Column H (7) - planned2 placeholder
-            "", // Column I (8) - actual2 placeholder
-            "", // Column J (9) - Blank as per request
-            "", "", "", "", "", // Padding columns K-O
-            selectedDept, // Column P (15) - Department (for history)
+            "", "", "", "", "", "", "", "",
+            selectedDept,
           ];
 
           const form = new FormData();
@@ -504,11 +489,11 @@ const availableJobs = useMemo(() => {
           invalidateCache("Department Issue");
           invalidateCache("Production Planning");
 
-          const updatePlanningTask = async () => {
-            const res = await fetch(`https://script.google.com/macros/s/AKfycbygSkpwhyYTjKeO5LRz06kTXMaM0mLMDwLNNaUR_rBItSshetknhJHGWuAJ3a2CMrX4/exec?sheet=Production%20Planning`);
-            const result = await res.json();
-            if (!result.success) return;
-
+          // Update Planning Row
+          const res = await fetch(`https://script.google.com/macros/s/AKfycbygSkpwhyYTjKeO5LRz06kTXMaM0mLMDwLNNaUR_rBItSshetknhJHGWuAJ3a2CMrX4/exec?sheet=Production%20Planning`);
+          const result = await res.json();
+          
+          if (result.success) {
             const rows = result.data as any[][];
             let rowIndex = -1;
             for (let i = 6; i < rows.length; i++) {
@@ -520,11 +505,7 @@ const availableJobs = useMemo(() => {
             if (rowIndex !== -1) {
               const currentIssued = parseFloat(rows[rowIndex-1][15]) || 0;
               const totalIssued = (currentIssued + issuedWeight).toFixed(3);
-              
-              const newRemainingWeight = Math.max(
-                0,
-                (parseFloat(formData.remainingWeightOverride) || 0) - issuedWeight
-              ).toFixed(3);
+              const newRemainingWeight = Math.max(0, (parseFloat(formData.remainingWeightOverride) || 0) - issuedWeight).toFixed(3);
 
               const updateCell = async (columnIndex: string, value: string) => {
                 const updateForm = new FormData();
@@ -533,35 +514,38 @@ const availableJobs = useMemo(() => {
                 updateForm.append("rowIndex", rowIndex.toString());
                 updateForm.append("columnIndex", columnIndex);
                 updateForm.append("value", value);
-                await fetch(
-                  "https://script.google.com/macros/s/AKfycbygSkpwhyYTjKeO5LRz06kTXMaM0mLMDwLNNaUR_rBItSshetknhJHGWuAJ3a2CMrX4/exec",
-                  { method: "POST", body: updateForm }
-                );
+                await fetch("https://script.google.com/macros/s/AKfycbygSkpwhyYTjKeO5LRz06kTXMaM0mLMDwLNNaUR_rBItSshetknhJHGWuAJ3a2CMrX4/exec", { method: "POST", body: updateForm });
               };
 
-              await updateCell("14", timestamp);
-              await updateCell("16", totalIssued);
-              await updateCell("17", newRemainingWeight);
+              await Promise.all([
+                updateCell("14", timestamp),
+                updateCell("16", totalIssued),
+                updateCell("17", newRemainingWeight)
+              ]);
             }
-          };
+          }
 
-          await updatePlanningTask();
-          
-          // Wait for consistency and refresh
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          await fetchAllData(true);
+          // 3️⃣ Instant Feedback (Turn off loader here)
+          setIsLoading(false);
+          setShowModal(false);
+          setShowSuccess(true);
+          setTimeout(() => setShowSuccess(false), 3000);
 
-        } catch (submitErr) {
-          console.error("Background submission error:", submitErr);
+          // 4️⃣ Background Refresh (Ensures consistency)
+          fetchAllData(true).catch(e => console.error("BG Refresh failed", e));
+
+        } catch (syncErr) {
+          console.error("Sync error:", syncErr);
+          setIsLoading(false);
+          alert("Data saved locally but server sync delayed. It will update automatically.");
         }
-
       }
     } catch (error) {
       console.error("Error submitting issue:", error);
       alert("Error submitting issue. Please try again.");
+      setIsLoading(false);
     } finally {
       setIsSubmitting(false);
-      setIsLoading(false); // Stop full page loader
     }
   };
   const formatDate = (date: any) => {

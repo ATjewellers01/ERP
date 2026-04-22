@@ -16,6 +16,7 @@ import {
   Gem,
   Settings,
   KeyRound,
+  BookOpen,
 } from "lucide-react";
 
 export const Layout = () => {
@@ -76,6 +77,12 @@ export const Layout = () => {
       name: "Karigar Receipt",
       path: "/karigar-receipt",
       icon: FileText,
+      roles: ["Admin", "Production Head", "Dept Manager", "user"],
+    },
+    {
+      name: "Leaguer",
+      path: "/leaguer",
+      icon: BookOpen,
       roles: ["Admin", "Production Head", "Dept Manager", "user"],
     },
     {

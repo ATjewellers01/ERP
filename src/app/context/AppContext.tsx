@@ -188,6 +188,7 @@ interface AppContextType {
   alloyStock: { "22K": number; "20K": number; "18K": number };
   liveDepartmentStock: LiveDepartmentStock;
   mainBreakdown: MainBreakdownStats;
+  karigarMainWeights: Array<{ karigarName: string; totalIssue: number; totalReturn: number; totalAvailable: number }>;
 }
 
 interface StockData {
@@ -257,6 +258,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     "20K": [],
     "18K": [],
   });
+
+  const [karigarMainWeights, setKarigarMainWeights] = useState<Array<{ karigarName: string; totalIssue: number; totalReturn: number; totalAvailable: number }>>([]);
 
   /**
    * fetchAllData — central data loader.
@@ -366,6 +369,34 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         setLiveDepartmentStock(newLiveStock);
         setMainBreakdown(breakdown);
+
+        // 🔹 Extract Karigar Main Weights (Columns AV, AZ, BD)
+        // First, we need the list of Karigars to match names in Main Calculation
+        const masterResult = resolveSheet("Master Drop Down");
+        const karigars = masterResult.success 
+          ? (masterResult.data as any[][]).slice(1).map(r => String(r[1] || "").trim()).filter(n => n !== "")
+          : [];
+        const uniqueKarigars = Array.from(new Set(karigars));
+
+        const mainWeightsList: Array<{ karigarName: string; totalIssue: number; totalReturn: number; totalAvailable: number }> = [];
+        
+        rows.forEach(row => {
+          // Search for a matching Karigar name in the first 60 columns of this row
+          const rowStrings = row.slice(0, 60).map(v => String(v || "").trim().toLowerCase());
+          const matchingKarigar = uniqueKarigars.find(k => rowStrings.includes(k.toLowerCase()));
+
+          if (matchingKarigar) {
+            const parseVal = (v: any) => parseFloat(String(v || "0").replace(/,/g, "")) || 0;
+            
+            mainWeightsList.push({
+              karigarName: matchingKarigar,
+              totalIssue: parseVal(row[47]),     // Column AV
+              totalReturn: parseVal(row[51]),    // Column AZ
+              totalAvailable: parseVal(row[55]), // Column BD
+            });
+          }
+        });
+        setKarigarMainWeights(mainWeightsList);
       }
 
       // 2. Process Procurement Entries (24K Metal Stock)
@@ -743,6 +774,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               chain: row[9],
               taar: row[10],
               kdm: row[11],
+              ghatJamaWeight: row[17],
+              ghatWastage: row[19],
               fineWeight: row[20],
               authorizedPerson: row[6],
               expectedDeliveryDate: row[5],
@@ -1034,6 +1067,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         alloyStock,
         liveDepartmentStock,
         mainBreakdown,
+        karigarMainWeights,
         users,
       }}
     >

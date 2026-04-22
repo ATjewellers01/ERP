@@ -11,6 +11,7 @@ import { DepartmentReturn } from "./pages/DepartmentReturn";
 import { StockSummary } from "./pages/StockSummary";
 import { Settings } from "./pages/Settings";
 import { License } from "./pages/License";
+import { Leaguer } from "./pages/Leaguer";
 import { NotFound } from "./pages/NotFound";
 import { Layout } from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -56,6 +57,12 @@ const KarigarIssuePage = () => (
 const KarigarReceiptPage = () => (
   <ProtectedRoute allowedRoles={["Admin", "Production Head", "Dept Manager", "user"]}>
     <KarigarReceipt />
+  </ProtectedRoute>
+);
+
+const LeaguerPage = () => (
+  <ProtectedRoute allowedRoles={["Admin", "Production Head", "Dept Manager", "user"]}>
+    <Leaguer />
   </ProtectedRoute>
 );
 
@@ -123,6 +130,10 @@ export const createRouter = () => createBrowserRouter([
           {
             path: "karigar-receipt",
             Component: KarigarReceiptPage,
+          },
+          {
+            path: "leaguer",
+            Component: LeaguerPage,
           },
           {
             path: "department-return",
